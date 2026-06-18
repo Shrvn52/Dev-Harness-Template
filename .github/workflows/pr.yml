@@ -59,6 +59,11 @@ jobs:
               - 'shared/**'
               - 'e2e/**'
               - 'playwright.config.ts'
+              # A dep-only bump is the case most likely to break E2E — without these
+              # the package files skip the only lane that would catch it.
+              - 'package*.json'
+              - 'backend/package*.json'
+              - 'frontend/package*.json'
 
   # ── Lint — eslint flat config across backend/src, shared, tests, frontend/src.
   lint:
@@ -171,3 +176,24 @@ jobs:
       - run: npm install --package-lock-only --ignore-scripts --prefix frontend
       - name: Assert lockfiles unchanged
         run: git diff --exit-code package-lock.json backend/package-lock.json frontend/package-lock.json
+
+  # ────────────────────────────────────────────────────────────────
+  # Secret scan — cheap leak insurance for a widely-cloned template;
+  # reinforces the repo's "don't leak" ethos. fetch-depth: 0 so gitleaks
+  # sees full history. Only the auto-provided GITHUB_TOKEN is needed.
+  # NOTE: gitleaks-action needs a GITLEAKS_LICENSE only for ORG-owned
+  # repos — this repo is personal-account-owned, so none is required. If
+  # it is ever transferred to an org, the license becomes mandatory.
+  # Pinned @v3 (the current major): @v2 runs on the deprecated Node 20
+  # action runtime and hard-fails on current GitHub-hosted runners.
+  # ────────────────────────────────────────────────────────────────
+  secret-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

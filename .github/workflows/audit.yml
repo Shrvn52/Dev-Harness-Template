@@ -1,0 +1,36 @@
+name: Audit
+
+# Weekly `npm audit` alarm. The README/CLAUDE.md headline is "0 vulnerabilities";
+# nothing on PRs runs audit, so a newly-disclosed advisory would rot silently. This
+# is a SCHEDULED visibility lane, never a PR gate — a transitive advisory shouldn't
+# red-block an unrelated PR (see the plan's rejected "hard per-PR gate" alt).
+on:
+  schedule:
+    - cron: '0 6 * * 1' # Mondays 06:00 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+      # No `npm ci` — `npm audit` resolves from the committed lockfile alone. Each
+      # tree is its own npm project (no workspaces), so audit all three with --prefix.
+      # `if: always()` on the later steps is VISIBILITY only: a root vuln must not hide
+      # a backend/frontend one. Each step still fails the job on its own non-zero exit
+      # (default — deliberately NO continue-on-error, which would swallow a dirty tree).
+      - name: Audit root
+        run: npm audit --audit-level=high
+      - name: Audit backend
+        if: always()
+        run: npm audit --audit-level=high --prefix backend
+      - name: Audit frontend
+        if: always()
+        run: npm audit --audit-level=high --prefix frontend
