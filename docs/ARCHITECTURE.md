@@ -330,7 +330,12 @@ shape as the route registry:
    a transaction.
 4. **An arch test** asserts every migration file appears in the array (copy
    `registry-coverage.test.ts` and re-point it) — so a dropped-in file that nobody
-   registered fails CI.
+   registered fails CI. The test now checks **both directions**: registry→backing
+   (a registered entry must have a file) AND backing→registry (every `routes/*.ts`
+   router file must be imported by the registry). The reverse check matches the
+   `'./<base>.js'` import specifier in `registry.ts` source, not the on-disk `.ts`
+   name — NodeNext ESM imports carry `.js`. Implied convention it enforces: **`routes/`
+   holds only router files**; non-router helpers belong in `lib/`.
 
 The seam is already in the right place: `runMigrations` is the single entry both `db.ts`
 and the test harness call, so swapping its body for a registry walk requires no caller
