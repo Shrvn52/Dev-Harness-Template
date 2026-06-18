@@ -41,4 +41,64 @@ describe('items API (integration)', () => {
     expect(res.status).toBe(404);
     expect(await res.json()).toEqual({ error: 'item 999 not found' });
   });
+
+  it('GET a non-numeric id returns a 400 from the param validator', async () => {
+    const res = await fetch(`${h.baseUrl}/api/items/abc`);
+    expect(res.status).toBe(400);
+    expect(await res.json()).toHaveProperty('error');
+  });
+
+  it('PUT updates an item title (200) and returns the updated DTO', async () => {
+    const post = await fetch(`${h.baseUrl}/api/items`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ title: 'before' }),
+    });
+    const { id } = await post.json();
+
+    const put = await fetch(`${h.baseUrl}/api/items/${id}`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ title: 'after' }),
+    });
+    expect(put.status).toBe(200);
+    expect(await put.json()).toMatchObject({ id, title: 'after' });
+  });
+
+  it('PUT with an empty body {} returns a 400 from the empty-body guard', async () => {
+    const post = await fetch(`${h.baseUrl}/api/items`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ title: 'x' }),
+    });
+    const { id } = await post.json();
+
+    const put = await fetch(`${h.baseUrl}/api/items/${id}`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    expect(put.status).toBe(400);
+    expect(await put.json()).toHaveProperty('error');
+  });
+
+  it('PUT a missing id with a valid body returns a 404 (changes === 0)', async () => {
+    const res = await fetch(`${h.baseUrl}/api/items/999`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ title: 'nope' }),
+    });
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: 'item 999 not found' });
+  });
+
+  it('PUT a non-numeric id with a body returns a 400 from the param validator', async () => {
+    const res = await fetch(`${h.baseUrl}/api/items/abc`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ title: 'x' }),
+    });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toHaveProperty('error');
+  });
 });
