@@ -10,11 +10,18 @@ This plan captures 12 improvements decided one-by-one with the operator. Each it
 the **approach chosen** (alternatives considered and rejected — noted where load-bearing),
 the **files to touch**, and the **validation gate** that proves it green.
 
-> **Per-cluster gate** — after EVERY cluster the repo must be green on:
+> **Per-cluster gate** — after each cluster, run the gate **scoped to what that cluster can affect**
+> (mirror `pr.yml`'s paths-filter; don't run every tier every time). Each cluster's own `Gate:` line
+> is authoritative — Cluster F is `shellcheck`, Cluster G is `git grep` (#4) + docs-audit (#12), the
+> example/backend Cluster A is lint+build+test+integration (its route change is fully covered there).
+> The maximal command below is the **Final acceptance gate**, not a per-cluster requirement (the
+> Playwright/`test:ui` tier belongs to frontend- or workflow-touching work, per each cluster's `Gate:`):
 > `npm run lint && npm run typecheck && npm run build && npm test && npm run test:integration && npm run test:smoke:dist && npx playwright test && npm run test:ui`
-> `typecheck` (#2) and `test:smoke:dist` (#3) are NEW scripts; until they land, omit them.
-> `npm audit` is **deliberately NOT** in the per-cluster gate — per #1 it is a whole-plan
-> sanity check / weekly alarm, not a merge gate; it appears only in the Final acceptance gate.
+> `typecheck` (#2) and `test:smoke:dist` (#3) are NEW scripts created in Clusters E and B — clusters
+> landing **before** them run the subset without them, which is sound because those clusters don't
+> touch the surfaces the new gates protect (test-file types, built-artifact resolution).
+> `npm audit` is **deliberately NOT** a per-cluster or merge gate — per #1 it is a whole-plan
+> sanity check / weekly alarm; it appears only in the Final acceptance gate.
 
 ---
 
@@ -92,9 +99,10 @@ preaches (full CRUD, param validation, typed errors end-to-end).
 - Rejected alt: a contrived route to exercise 409 end-to-end (pollutes the minimal example).
   The `PUT` from #11 already adds a real `NotFoundError` + `BadRequestError` end-to-end path.
 
-**Cluster A tests:** `tests/integration/items.test.ts` — PUT happy path (200 + updated title),
-**PUT empty body `{}` → 400 `{error}`**, PUT missing id (404), `GET /api/items/abc` (400). Plus
-the new unit test above.
+**Cluster A tests:** `tests/integration/items.test.ts` — PUT happy path (200 + updated title);
+**PUT empty body `{}` → 400 `{error}`** (empty-body guard); **`PUT /api/items/999` with a valid body
+→ 404** (the `info.changes === 0` branch — distinct from the param 400); **`PUT /api/items/abc` with a
+body → 400** (param `zValidator`); `GET /api/items/abc` → 400. Plus the new unit test above.
 **Gate:** lint + build + test + integration green.
 
 ---
@@ -107,7 +115,7 @@ the new unit test above.
   only because every relative import hand-carries `.js`; `bundler` doesn't enforce that. An
   extensionless import would pass tsc+vitest+CI and crash `npm start`. `docs/TESTING.md:53-54`
   admits the built bundle "is built in CI but not exercised end-to-end."
-- Do (two parts, both):
+- Do (two parts + a doc follow-up):
   1. `backend/tsconfig.json`: set `"module": "nodenext"` and `"moduleResolution": "nodenext"`
      (overrides base). **Verified clean:** backend src+shared compile EXIT 0 under nodenext —
      no `better-sqlite3` / `../../../shared/*.js` / hono interop nits (every relative import
@@ -121,19 +129,42 @@ the new unit test above.
        `backend/dist/backend/src/index.js`; there is **no top-level `dist/`** — `node dist/...`
        from repo root is ENOENT, which is why every backend-touching root script does `cd backend`),
        `env: { ...process.env, PORT: '8138', DB_PATH: ':memory:' }` (8138 avoids the 8137 default;
-       `:memory:` makes the smoke self-contained, auto-migrates, leaves no file artifact).
+       `:memory:` is already `config.ts`'s default — passing it explicitly is belt-and-suspenders
+       against a future file-default, and keeps the smoke self-contained, auto-migrating, no file
+       artifact), and `stdio: ['ignore', 'inherit', 'inherit']` so a boot crash surfaces the child's
+       stderr instead of a bare poll timeout.
+     - **Fail fast, don't hang:** attach `child.on('error', …)` (ENOENT → print "run `npm run build`
+       first" and exit 1) and `child.on('exit', …)`. Gate the exit handler on a `let ready = false`
+       flag that flips `true` once the health poll returns 200: `on('exit')` rejects **only if
+       `!ready`** (an exit before readiness = boot crash), so the deliberate `finally` SIGTERM during
+       teardown — which fires `on('exit')` *after* success — is ignored, not misread as a failure.
+       Settle the result promise once (guard against double-settle). Mirror `tools/dev.mjs`'s
+       `shuttingDown` re-entry guard. A bound-port collision (EADDRINUSE on 8138) surfaces as the poll
+       timeout — fail loud; the operator frees the port.
      - Poll `http://127.0.0.1:8138/api/health` via node global `fetch` in a retry/backoff loop
-       until 200 or ~5s timeout (boot is async — poll, don't `sleep`); assert body
-       `{ ok: true, status: 'healthy' }`.
+       until 200 or ~5s timeout (boot is async — poll, don't `sleep`). Once a 200 arrives, assert body
+       `{ ok: true, status: 'healthy' }` as an **immediate hard failure on mismatch** (don't re-poll a
+       wrong body into a timeout — that would blur "bound but wrong" into "never bound").
      - POST `http://127.0.0.1:8138/api/items` `{ title: 'smoke' }` → expect 201.
-     - `child.kill('SIGTERM')` in a `finally`; `process.exit(1)` on any failure, `exit(0)` on success.
+     - In a `finally`, `child.kill('SIGTERM')` **guarded** (`if (child.pid && !child.killed)`) so a
+       never-started child doesn't throw; `process.exit(1)` on any failure, `exit(0)` on success.
+       (The backend has no graceful-shutdown handler, but default `SIGTERM` still terminates it.)
      - NOTE the `/api/` prefix: endpoints are `/api/health` and `/api/items`, not bare paths.
-     - Add `"test:smoke:dist": "node tools/smoke.mjs"` to **root** `package.json`. **Name it
-       `test:smoke:dist`** (not `test:smoke`) to avoid conflation with the existing in-process
+     - Add `"test:smoke:dist": "node tools/smoke.mjs"` to **root** `package.json`, and add a
+       `npm run test:smoke:dist` row to the CLAUDE.md Development-commands table (the self-declared
+       SSOT the docs-audit skill drift-checks against `package.json`). **Name it `test:smoke:dist`**
+       (not `test:smoke`) to avoid conflation with the existing in-process
        `tests/integration/test-app.smoke.test.ts` ("the harness tests itself" — a Vitest test on
        an injected in-memory DB that already runs under `npm test`). The new lane boots the real
-       built artifact. Wire as a CI step in the `backend` job **after build** (NOT inside
-       `npm test` — needs the built `dist`).
+       built artifact. Wire it as a new step in `pr.yml`'s `backend` job **immediately after**
+       `npm run build --prefix backend`, running the root script `npm run test:smoke:dist` (zero-dep —
+       no root `npm ci` needed; the `dist` the prior step built lives at `backend/dist/…`). Also add
+       `tools/**` to the `backend` paths-filter block (`pr.yml:45-50`) — otherwise a PR editing only
+       `tools/smoke.mjs` skips the lane that exercises it (the same filter gap #10 fixes for e2e).
+       NOT inside `npm test` (it needs the built `dist`).
+  3. Once the smoke lane lands, update `docs/TESTING.md:53-54` — its "built in CI but **not exercised
+     end-to-end**" claim is now false (the smoke boots the real artifact). Leaving it stale is drift
+     #12's docs-audit gate would flag.
 - Gate: build (nodenext) + `npm run test:smoke:dist` green.
 
 ---
@@ -152,9 +183,19 @@ the new unit test above.
   on-disk `.ts` filename — `registry.ts:2-3` uses NodeNext ESM imports (`import health from
   './health.js'`), so `src.includes('health.ts')` finds ZERO matches for a correctly-registered
   route (verified). Use a quote-anchored regex to avoid prefix false-positives (a base that is a
-  substring of another registered import). The `.js` extension is reliable because #3 (nodenext)
-  enforces it. Concrete heuristic to embed:
+  substring of another registered import). Matching the `.js` import form is reliable because it is
+  *already* the in-repo convention (`registry.ts:2-3` uses `'./health.js'`/`'./items.js'` today,
+  independent of #3) — #3 (nodenext) only makes a *future* extensionless drift impossible. So #7
+  (Cluster C) does **not** require #3 (Cluster B) first; B and C are independently landable.
+  Concrete heuristic to embed (imports as in the sibling arch tests —
+  `import { fileURLToPath } from 'node:url'; import { dirname, join, resolve } from 'node:path';
+  import { readFileSync, readdirSync } from 'node:fs'`):
   ```ts
+  // cwd-independent anchoring — `npm test` runs from cwd: backend, so a cwd-relative
+  // readdirSync('backend/src/routes') would read the wrong dir; resolve from this file instead.
+  const here = dirname(fileURLToPath(import.meta.url)); // tests/arch/
+  const routesDir = resolve(here, '..', '..', 'backend/src/routes');
+  const registryPath = join(routesDir, 'registry.ts');
   const src = readFileSync(registryPath, 'utf8');
   const files = readdirSync(routesDir).filter(f => f.endsWith('.ts') && f !== 'registry.ts');
   expect(files.length).toBeGreaterThan(0); // sanity floor
@@ -162,7 +203,9 @@ the new unit test above.
   for (const f of files) {
     const base = f.replace(/\.ts$/, '');
     const re = new RegExp(`['"]\\./${esc(base)}\\.js['"]`);
-    expect(re.test(src), `routes/${f} is not registered in ROUTES`).toBe(true);
+    expect(re.test(src),
+      `routes/${f} exposes a router but is not registered in ROUTES — add it, or move non-router helpers to lib/`,
+    ).toBe(true);
   }
   ```
   Read `registry.ts` **source via fs** — do NOT inspect the imported `ROUTES` array (its path
@@ -183,8 +226,15 @@ the new unit test above.
   package.json + lockfile returns "0 vulnerabilities", exit 0). Three steps: `npm audit
   --audit-level=high` at root, `--prefix backend`, `--prefix frontend` (verified: `--prefix`
   audits each subproject's own tree — they are three separate npm projects, no workspaces). Put
-  `if: always()` on the 2nd and 3rd steps so a root vuln doesn't hide a backend/frontend one.
-  **Non-blocking** for PRs (the schedule lane never runs on PRs). Optional: open/update an issue on failure.
+  `if: always()` on the 2nd and 3rd steps so a root vuln doesn't hide a backend/frontend one —
+  but `if: always()` is for **visibility only**: each audit step must still fail the job on its own
+  non-zero exit (default; **no `continue-on-error`** on any audit step — that, not `if: always()`,
+  is the trap that silently swallows a dirty tree).
+  **Non-blocking** for PRs (the schedule lane never runs on PRs). The scheduled red ✗ + `if: always()`
+  visibility is the self-sufficient minimum; an open/update-issue-on-failure step is **optional and, if
+  built, must be concrete** (e.g. `actions/github-script` with a fixed title for idempotent update) and
+  needs `permissions: { contents: read, issues: write }` (the workflow-default `contents: read` cannot
+  write issues) — don't leave a permissions grant pointing at an unspecified step.
   (Unrelated to the `lockfile-drift` job in `pr.yml:136` — that uses `npm install --package-lock-only`
   to assert no drift; do not conflate.)
 - Rejected alt: hard per-PR gate (can red-block unrelated PRs on an unfixable transitive).
@@ -198,15 +248,22 @@ the new unit test above.
 
 **#13 — Gitleaks secret-scan lane** (enrichment)
 - Why: widely-cloned template; cheap leak insurance; reinforces the "don't leak" ethos.
-- Do: add a `secret-scan` job to `pr.yml` using `gitleaks/gitleaks-action@v2` with
-  `actions/checkout@v4` `fetch-depth: 0`. Only the auto-provided `GITHUB_TOKEN` is needed —
-  **no `GITLEAKS_LICENSE`** (verified: repo is personal-account-owned; gitleaks-action@v2 needs a
-  license only for org-owned repos). **Org-transfer trap:** if the repo ever moves to an org, the
+- Do: add a `secret-scan` job to `pr.yml` using `gitleaks/gitleaks-action@v3` with
+  `actions/checkout@v4` `fetch-depth: 0`. **Pin `@v3`, not `@v2`** — `@v2` runs on the Node 20
+  action runtime, which GitHub-hosted runners have deprecated (default flipped to Node 24 in mid-2026,
+  full Node 20 removal to follow), so a `@v2` lane hard-fails on every run on current runners. `@v3`
+  is the current major (no input/output/behavior change — same invocation); confirm it is still the
+  latest supported, Node-24-compatible major at implementation time. Only the auto-provided
+  `GITHUB_TOKEN` is needed — **no `GITLEAKS_LICENSE`** (verified: repo is personal-account-owned;
+  gitleaks-action needs a license only for org-owned repos). **Org-transfer trap:** if the repo ever moves to an org, the
   license becomes mandatory — note this in a workflow comment. No secret-shaped fixtures exist
   that would false-positive; add a `.gitleaks.toml` allowlist only if one appears.
 - NOTE: Dependabot was **explicitly rejected** — unmerged-PR noise on a non-actively-maintained
   reference repo. Gitleaks kept; Dependabot dropped.
-- Gate: `pr.yml` + `audit.yml` valid YAML; push a branch and confirm Actions parse.
+- Gate (whole Cluster D — #1/#10/#13): `pr.yml` + `audit.yml` parse as valid workflow YAML (e.g.
+  `actionlint`, or push a branch and confirm Actions parse); confirm the `e2e` filter now triggers on
+  a package-only diff (#10) and the `backend` filter on a `tools/`-only diff (#3/#10), and that the
+  `secret-scan` + `audit` jobs appear in the Actions run.
 
 ---
 
@@ -216,65 +273,74 @@ the new unit test above.
 - Why: no tsconfig includes `tests/`; `frontend/tsconfig.json` excludes `*.test.tsx`; Vitest
   (esbuild) strips types without checking. A type error in any test/arch file passes all gates —
   the guardrail code is itself unguarded.
-- **Root cause that breaks the naive fix:** a repo-root `tsconfig.typecheck.json` that includes
-  `tests/` fails with **14 TS2307 errors on a clean clone** — `tests/` files import bare
-  specifiers (`vitest`, `hono`, `@hono/node-server`, `better-sqlite3`) that live ONLY in
-  `backend/node_modules`, and TS resolves bare imports from each file's own directory walking up,
-  so `tests/` walks to the (test-dep-less) repo root. Confirmed location-independent. Two
-  guardrail surfaces also have different dep roots: `frontend/src/App.test.tsx` +
-  `frontend/src/test-setup.ts` need `frontend/node_modules` (`@testing-library/*`) plus JSX/DOM
-  libs. → **Two configs, rooted where the deps live.**
+- **Root cause:** a repo-root `tsconfig.typecheck.json` that includes `tests/` fails with **~14
+  TS2307 errors on a clean clone** — `tests/` files import bare specifiers (`vitest`, `hono`,
+  `@hono/node-server`, `@hono/zod-validator`, `zod`, `better-sqlite3`) that live ONLY in
+  `backend/node_modules`, and TS resolves bare imports walking up from each file's own dir, so
+  `tests/` walks to the (test-dep-less) repo root. **Chosen fix (decided): put the test deps where
+  `tests/` resolves them — root devDependencies.** Simpler and more robust than a `paths`-remap; the
+  remap is "a guardrail with a quiet hole" — any new test-only import silently bypasses the gate with
+  a confusing TS2307-on-an-installed-module, the very failure class #2 exists to close. The frontend
+  test surface is separate: `frontend/src/App.test.tsx` + `frontend/src/test-setup.ts` need
+  `frontend/node_modules` (`@testing-library/*`) + JSX/DOM libs, so it keeps its own config. →
+  **Two configs: a root lane (tests + backend + shared) and a frontend lane.**
 
-- **Do — #2a backend/tests lane (VERIFIED green + non-vacuous):** new
-  `backend/tsconfig.typecheck.json` with explicit `paths` remapping the test-only bare specifiers
-  to `backend/node_modules` (this is the load-bearing detail; `better-sqlite3` is **@types-only**
-  so it maps to its types package, not the JS package):
-  ```jsonc
-  {
-    "extends": "../tsconfig.base.json",
-    "compilerOptions": {
-      "noEmit": true, "rootDir": "..", "baseUrl": ".",
-      "paths": {
-        "@shared/*": ["../shared/*"],
-        "vitest": ["./node_modules/vitest"],
-        "hono": ["./node_modules/hono"], "hono/*": ["./node_modules/hono/*"],
-        "@hono/node-server": ["./node_modules/@hono/node-server"],
-        "@hono/zod-validator": ["./node_modules/@hono/zod-validator"],
-        "zod": ["./node_modules/zod"],
-        "better-sqlite3": ["./node_modules/@types/better-sqlite3"]
-      }
-    },
-    "include": ["src", "../shared", "../tests"]
-  }
-  ```
-  Script (root): `"typecheck:backend": "cd backend && tsc -p tsconfig.typecheck.json"`.
-  **Verified:** EXIT 0 on a clean `npm ci`, and red (`TS2322`) on an injected type error in a
-  `tests/` file. backend/src + shared are already build-checked; the new surface this adds is `tests/`.
-  - Rejected alt — **root devDependencies** (add vitest/hono/better-sqlite3/etc. to root so
-    `tests/` resolves from root): simpler and more robust, but it **falsifies ARCHITECTURE.md:56-62's
-    "the root dep tree stays tiny (only Playwright + ESLint live there)" claim** and would force a
-    doc edit + grow root's audit surface. The `paths`-remap keeps root thin; the specifier list is
-    bounded (tests import only the 4 top-level packages above). Use root-devDeps only if the
-    `paths` list proves too churny — and update ARCHITECTURE.md if so.
+- **Do — #2a root lane (root-devDeps):**
+  1. Add to **root** `package.json` `devDependencies` the test-only bare specifiers that `tests/`
+     (and the backend `src` those tests import) resolve: `vitest`, `hono`, `@hono/node-server`,
+     `@hono/zod-validator`, `zod`, and `@types/better-sqlite3` (types-only — `db.ts`'s
+     `import Database from 'better-sqlite3'` typechecks against the `@types` declaration; the heavy
+     native package is NOT needed at root for a `noEmit` typecheck). Verify the exact set against
+     `tests/`'s real imports before finalizing; pin to the versions already in `backend/`.
+  2. New **root** `tsconfig.typecheck.json` — no bare-specifier `paths` remap; the only `paths` entry
+     is the legitimate `@shared` alias:
+     ```jsonc
+     {
+       "extends": "./tsconfig.base.json",
+       "compilerOptions": {
+         "noEmit": true, "baseUrl": ".",
+         "paths": { "@shared/*": ["shared/*"] }
+       },
+       "include": ["tests", "shared", "backend/src"]
+     }
+     ```
+  3. Script (root): `"typecheck:backend": "tsc -p tsconfig.typecheck.json"` (root-rooted now — no
+     `cd backend`; the config covers `tests/` + `shared/` + `backend/src`).
+  4. Update **ARCHITECTURE.md:56-62** — the "root dep tree stays tiny (only Playwright + ESLint live
+     there)" claim becomes "root holds Playwright, ESLint, and the test-only type deps the
+     cross-cutting `tests/` tier imports" (the accepted cost of this approach). Do this in the same
+     pass as #4's ARCHITECTURE.md edit.
+  Backend src is checked here under `bundler` (base) — fine; extension **enforcement** is the build's
+  job (#3 nodenext), and backend src checks clean under both modes. The new surface this adds is `tests/`.
+  - Rejected alt — `paths`-remapping the bare specifiers into `backend/node_modules` (keeps root
+    thin but is a hand-maintained map: a new test-only import missing from it fails TS2307 on an
+    installed module — a silent hole in the very gate #2 builds). Rejected in favour of root-devDeps.
   - Rejected alt — `vitest --typecheck`: only checks `*.test-d.ts` type-assertion files, reports
     "No test files found" against this suite.
 
 - **Do — #2b frontend test lane (closes the OPEN ITEM; VERIFIED non-vacuous):** new
-  `frontend/tsconfig.typecheck.json` = `frontend/tsconfig.json` with `"noEmit": true` and the
-  three test excludes **removed** (`src/**/*.test.ts`, `src/**/*.test.tsx`, `src/test-setup.ts`;
-  keep `node_modules`, `dist`). They can't fold into the root config — they need `jsx: react-jsx`,
+  `frontend/tsconfig.typecheck.json` = `frontend/tsconfig.json` (which already sets `noEmit: true`)
+  with **only** the three test excludes removed (`src/**/*.test.ts`, `src/**/*.test.tsx`,
+  `src/test-setup.ts`; keep `node_modules`, `dist`). They can't fold into the root config — they need `jsx: react-jsx`,
   DOM lib, and the `@testing-library/jest-dom` augmentation. Script:
-  `"typecheck:frontend": "cd frontend && tsc -p tsconfig.typecheck.json"`. (Verified: EXIT 0;
+  `"typecheck:frontend": "cd frontend && tsc -p tsconfig.typecheck.json"`. (Verified against the
+  excludes-removed `frontend/tsconfig.typecheck.json` itself — not the base config: EXIT 0;
   injecting `const x: number = '…'` → TS2322; bogus matcher → TS2551, so jest-dom matcher types
-  resolve and the lane is non-vacuous.)
+  resolve and the lane is non-vacuous. `paths` resolves relative to the config without an explicit
+  `baseUrl` under modern TS.)
 
 - **Do — aggregate:** root `"typecheck": "npm run typecheck:backend && npm run typecheck:frontend"`
   (mirrors how `test` aggregates). Add a CI lane mirroring the lint lane that runs `npm run
-  typecheck`; add it to `.claude/commands/validate.md` as lane 5.
+  typecheck`; add it to `.claude/commands/validate.md` as lane 5; and add a `npm run typecheck` row
+  to the CLAUDE.md Development-commands table — list only the aggregate (the table lists user-facing
+  aggregate scripts and already omits tier-internal aliases like `test:backend`/`test:frontend`, so
+  the docs-audit drift check verifies each listed row resolves to a real script, not strict
+  set-equality with `package.json`).
 - **Gate:** `npm run typecheck` EXIT 0 on a fresh `npm ci` (confirm BEFORE marking #2 done — the
-  naive root config is RED on a clean clone); then verify it goes red on a deliberate type error
-  in **both** a `tests/` file AND `frontend/src/App.test.tsx`, and revert. Until green, keep
-  `typecheck` omitted from the per-cluster gate per the existing carve-out.
+  root config is green only AFTER the root devDeps land; without them it's the ~14 TS2307 failure);
+  then verify it goes red on a deliberate type error in **both** a `tests/` file AND
+  `frontend/src/App.test.tsx`, and revert. Until green, keep `typecheck` omitted from the per-cluster
+  gate per the existing carve-out.
 
 ---
 
@@ -314,8 +380,8 @@ the new unit test above.
   - `docs/SETUP.md:16` "`npm install` will compile the binding" → "`npm ci` will compile the binding".
   - `docs/ARCHITECTURE.md:59` "**`npm install` runs three times**" → "**`npm ci` runs three
     times**" (or make it a generic statement — decide, do not leave un-triaged; the original plan
-    omitted ARCHITECTURE.md). NOTE: if the #2 root-devDeps alternative is ever chosen, this same
-    line's "tiny root tree" framing at `:56-62` also needs revisiting.
+    omitted ARCHITECTURE.md). NOTE: #2a (root-devDeps, decided) also edits this file's "tiny root
+    tree" claim at `:56-62` — do both ARCHITECTURE.md edits in one pass (see #2a step 4).
   - `plans/2026-06-17-harness-blueprint.md:228` — a **tracked, active** plan whose green-on-clone
     block still uses `npm install` ×3; an agent copying it reintroduces the drift. Update it to
     `npm ci` ×3 or add a footnote pointing at this item.
@@ -332,7 +398,9 @@ the new unit test above.
   template (`gh repo edit --template` — confirmed real — or repo Settings; **outward-facing,
   confirm with operator**).
 - Rejected alt: a `tools/rename-example.mjs` codegen script — self-rotting drift surface, off-thesis.
-- Gate: docs-only; run `docs-audit` or eyeball that no claim drifted.
+- Gate: docs-only; run `docs-audit` or eyeball that no claim drifted — including that every CLAUDE.md
+  Development-commands row still resolves to a real `package.json` script after #2/#3 add
+  `npm run typecheck` + `npm run test:smoke:dist`, and that `docs/TESTING.md:53-54` was updated per #3.
 
 ---
 
@@ -351,8 +419,8 @@ the new unit test above.
 Pre-execution tree hygiene: run `git status --porcelain` first. This plan file
 (`plans/2026-06-18-harness-hardening.md`) is the only expected untracked file at start; commit
 it with the harness work. Delete any leftover review scratch (`tsconfig.typecheck*.tmp.json`,
-`*.mytmp.json`) before starting; do NOT delete `tsconfig.typecheck.json`/`backend/tsconfig.typecheck.json`
-once #2 creates them.
+`*.mytmp.json`) before starting; do NOT delete the root `tsconfig.typecheck.json` /
+`frontend/tsconfig.typecheck.json` configs once #2 creates them.
 
 From repo root, all green:
 ```
@@ -374,18 +442,20 @@ arch reverse-check and the typecheck gate each verified red-on-violation then re
 ## Suggested PR slicing
 
 Production code needs PRs (per repo policy); `.claude/`, `.github/`, docs, and this plan are
-lighter. Reasonable grouping: (1) Cluster A example-domain PR, (2) Cluster B nodenext+smoke PR,
-(3) Cluster C arch + Cluster E typecheck PR, (4) Cluster D CI workflows PR, (5) Cluster F+G
-hook+docs PR. Or one "harness hardening" PR for a single review.
+lighter. Reasonable grouping: (1) Cluster A example-domain PR, (2) Cluster B nodenext+smoke PR
+(note: this PR also edits `pr.yml` — the smoke step + `tools/**` paths-filter — alongside the
+backend `tsconfig` and `tools/smoke.mjs`), (3) Cluster C arch + Cluster E typecheck PR (independently
+landable — C does **not** depend on B), (4) Cluster D CI workflows PR, (5) Cluster F+G hook+docs PR.
+Or one "harness hardening" PR for a single review.
 
 ## Correction log (this plan was adversarially verified — 18 confirmed fixes folded in)
 
 1. Count 11→12 IN items. 2. `docs/SETUP.md` (no root SETUP.md); install lines are README:48-50 /
 docs/SETUP.md:35-37. 3. Smoke artifact path is `backend/dist/backend/src/index.js` (no top-level
 `dist/`). 4. Smoke renamed `test:smoke:dist` (avoid clash with existing in-process
-`*.smoke.test.ts`). 5. `#2` naive root config is RED on clean clone (14 TS2307) → two-config
-design with `paths`-remap; **verified green + non-vacuous**. 6. `better-sqlite3` maps to
-`@types/better-sqlite3`. 7. `#2b` frontend typecheck closes the open item (verified). 8. Registry
+`*.smoke.test.ts`). 5. `#2` naive root config is RED on clean clone (~14 TS2307) → fix is root-devDeps + a root
+typecheck config (the `paths`-remap alternative was dropped as a silent-hole guardrail); frontend
+lane stays separate. 6. `better-sqlite3` resolves via `@types/better-sqlite3` (types-only). 7. `#2b` frontend typecheck closes the open item (verified). 8. Registry
 reverse-check matches `'./<base>.js'` (anchored regex), NOT `.ts`. 9. PUT empty-body guard
 (`BadRequestError`); mechanism is NOT-NULL→500, not a bind error. 10. Smoke = zero-dep
 `tools/smoke.mjs` (node `fetch` poll, port 8138, `:memory:`, SIGTERM), not inline bash/curl.
