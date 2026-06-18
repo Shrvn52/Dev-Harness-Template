@@ -65,7 +65,7 @@ and lockfile. The trade is deliberate:
   deliberate `hono` bump.
 - **A package is liftable.** Because nothing depends on workspace hoisting, you can
   copy `backend/` out to its own repo without untangling a hoisted graph.
-- **`npm install` runs three times** (root, backend, frontend) — the one cost. The
+- **`npm ci` runs three times** (root, backend, frontend) — the one cost. The
   `tools/dev.mjs` launcher exists for the same "no shared root deps" reason: it
   replaces `concurrently` with a zero-dependency `spawn` so the root tree stays
   `npm audit`-clean on a fresh clone.
