@@ -41,6 +41,7 @@ Run from the repo root. (cd-delegation monorepo — root scripts shell into the 
 | `npm run build` | Frontend (`tsc` + vite) then backend (`tsc` → `backend/dist/`). |
 | `npm start` | Run the built backend (`node dist/backend/src/index.js`). |
 | `npm run lint` | `eslint .` — the mechanical conventions. |
+| `npm run typecheck` | Tests-inclusive type gate — `tsc --noEmit` over `tests/` + `shared` + `backend/src` and the frontend test surface (Vitest's esbuild never type-checks). |
 | `npm test` | Node tiers (unit + integration + arch) then the frontend jsdom tier. |
 | `npm run test:integration` | API integration tier only. |
 | `npm run test:smoke:dist` | Boot the built `backend/dist` artifact under real Node ESM and hit `/api/health` + `POST /api/items` (needs `npm run build` first; zero-dep `tools/smoke.mjs`). |

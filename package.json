@@ -18,14 +18,27 @@
     "test:frontend": "cd frontend && npm test",
     "test:integration": "cd backend && npx vitest run ../tests/integration",
     "test:smoke:dist": "node tools/smoke.mjs",
+    "typecheck": "npm run typecheck:backend && npm run typecheck:frontend",
+    "typecheck:backend": "tsc -p tsconfig.typecheck.json",
+    "typecheck:frontend": "cd frontend && tsc -p tsconfig.typecheck.json",
     "test:ui": "CC_INTEGRATION=1 playwright test e2e/ui",
     "lint": "eslint ."
   },
   "devDependencies": {
+    "@hono/node-server": "1.19.14",
+    "@hono/zod-validator": "^0.7.6",
     "@playwright/test": "^1.49.1",
+    "@types/better-sqlite3": "^7.6.12",
     "@typescript-eslint/eslint-plugin": "^8.20.0",
     "@typescript-eslint/parser": "^8.20.0",
     "eslint": "^9.18.0",
-    "eslint-plugin-react-hooks": "^5.1.0"
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "hono": "4.12.25",
+    "typescript": "^5.7.3",
+    "vitest": "^3.2.4",
+    "zod": "^4.3.6"
+  },
+  "overrides": {
+    "esbuild": "^0.25.0"
   }
 }

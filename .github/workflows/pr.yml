@@ -75,6 +75,26 @@ jobs:
       - run: npm ci
       - run: npm run lint
 
+  # ── Typecheck — the tests-inclusive type gate. Vitest (esbuild) strips types
+  #    without checking, so a type error in any test/arch file passes every other
+  #    lane; this closes that hole. Needs all three trees installed: backend/src and
+  #    the frontend resolve their imports from their own node_modules.
+  typecheck:
+    needs: [changes]
+    if: needs.changes.outputs.lint == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm ci --prefix backend
+      - run: npm ci --prefix frontend
+      - run: npm run typecheck
+
   # ── Backend — typecheck/build + the node test tiers (unit + integration + arch).
   backend:
     needs: [changes]
