@@ -50,7 +50,10 @@ verification:
   it is exercised; network calls should be mocked at the boundary and the real
   behaviour verified manually.
 - **Cross-process / cross-host flows.** Anything spanning more than one process.
-- **Production build runtime.** Tests run via Vitest (esbuild transpile) and `tsx`;
-  the `tsc`-emitted `backend/dist` bundle is built in CI but not exercised end-to-end.
+- **Deep production-build runtime.** The `npm run test:smoke:dist` lane now boots the
+  real `tsc`-emitted `backend/dist` bundle under Node's NodeNext ESM resolver and hits
+  `/api/health` + `POST /api/items`, so a broken module-resolution / ESM-emit regression
+  is caught (Vitest's esbuild transpile and `tsx` would miss it). It is a *smoke*, not a
+  full suite: only the health probe and one create are asserted against the built artifact.
 
 When you touch one of these surfaces, verify it by hand and say so in the PR.

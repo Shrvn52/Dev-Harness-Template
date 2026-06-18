@@ -3,7 +3,9 @@
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": "..",
-    "declaration": false
+    "declaration": false,
+    "module": "nodenext",
+    "moduleResolution": "nodenext"
   },
   "include": ["src/**/*", "../shared/**/*"],
   "exclude": ["node_modules", "dist"]

@@ -46,6 +46,7 @@ jobs:
               - 'backend/**'
               - 'shared/**'
               - 'tests/**'
+              - 'tools/**'
               - 'package.json'
               - '.github/workflows/**'
             frontend:
@@ -89,6 +90,10 @@ jobs:
           cache-dependency-path: backend/package-lock.json
       - run: npm ci --prefix backend
       - run: npm run build --prefix backend
+      # Boot the real built artifact under Node's NodeNext ESM resolver — the one
+      # surface tsc/vitest never exercise. Zero-dep (node tools/smoke.mjs), so no
+      # root `npm ci`; the dist the prior step built lives at backend/dist/…
+      - run: npm run test:smoke:dist
       - run: npm test --prefix backend
 
   # ── Frontend — typecheck + vite build + the jsdom test tier.
