@@ -1,0 +1,148 @@
+name: PR
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: pr-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # ────────────────────────────────────────────────────────────────
+  # Path filter — decides which downstream lanes run. Cheap lanes gate
+  # every PR; expensive lanes (e2e) fire only when their code changes.
+  # Edit .github/workflows/** → the lint + backend lanes re-validate.
+  # Use the Run workflow button (workflow_dispatch) to force a full run.
+  # ────────────────────────────────────────────────────────────────
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    outputs:
+      lint: ${{ steps.filter.outputs.lint }}
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      e2e: ${{ steps.filter.outputs.e2e }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            lint:
+              - 'backend/src/**/*.ts'
+              - 'frontend/src/**/*.{ts,tsx}'
+              - 'shared/**/*.ts'
+              - 'tests/**/*.ts'
+              - 'eslint.config.mjs'
+              - 'package.json'
+              - 'package-lock.json'
+              - '.github/workflows/**'
+            backend:
+              - 'backend/**'
+              - 'shared/**'
+              - 'tests/**'
+              - 'package.json'
+              - '.github/workflows/**'
+            frontend:
+              - 'frontend/**'
+              - 'shared/**'
+              - 'package.json'
+            e2e:
+              - 'backend/**'
+              - 'frontend/**'
+              - 'shared/**'
+              - 'e2e/**'
+              - 'playwright.config.ts'
+
+  # ── Lint — eslint flat config across backend/src, shared, tests, frontend/src.
+  lint:
+    needs: [changes]
+    if: needs.changes.outputs.lint == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run lint
+
+  # ── Backend — typecheck/build + the node test tiers (unit + integration + arch).
+  backend:
+    needs: [changes]
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci --prefix backend
+      - run: npm run build --prefix backend
+      - run: npm test --prefix backend
+
+  # ── Frontend — typecheck + vite build + the jsdom test tier.
+  frontend:
+    needs: [changes]
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --prefix frontend
+      - run: npm run build --prefix frontend
+      - run: npm test --prefix frontend
+
+  # ── E2E — the expensive lane. Real browser + both servers. Only on code change.
+  e2e:
+    needs: [changes]
+    if: needs.changes.outputs.e2e == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm ci --prefix backend
+      - run: npm ci --prefix frontend
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test            # always-on API specs
+      - run: npm run test:ui                 # flag-gated UI specs (built frontend)
+
+  # ────────────────────────────────────────────────────────────────
+  # Lockfile drift — `npm install --package-lock-only` must be a no-op
+  # on a fresh checkout. Catches a dep that silently rewrites the
+  # lockfile on every contributor's first install.
+  # ────────────────────────────────────────────────────────────────
+  lockfile-drift:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+      - run: npm install --package-lock-only --ignore-scripts
+      - run: npm install --package-lock-only --ignore-scripts --prefix backend
+      - run: npm install --package-lock-only --ignore-scripts --prefix frontend
+      - name: Assert lockfiles unchanged
+        run: git diff --exit-code package-lock.json backend/package-lock.json frontend/package-lock.json

@@ -1,0 +1,83 @@
+name: issue-to-pr
+description: |
+  STARTING POINT — adapt before relying on the output.
+
+  Use when: you want to take a GitHub issue end-to-end into a draft PR with
+            invariant awareness baked in from the first line of code.
+  Does: loads the issue -> preloads .archon/invariants.yaml so the implementer
+        writes compliant code first time -> implements -> verifies (build/test)
+        -> self-reviews against the same invariants -> opens a draft PR.
+
+  Data-driven: the implementer and reviewer both read .archon/invariants.yaml at
+  runtime, so a new invariant row tightens both ends without a workflow edit.
+
+  Contract:
+    input    $ARGUMENTS = issue number or URL
+    output   draft PR url
+    side FX  creates a branch + draft PR; runs your verify command
+
+nodes:
+  - id: check-deps
+    bash: |
+      command -v gh >/dev/null && command -v jq >/dev/null || {
+        echo "missing deps: need gh and jq"
+        exit 1
+      }
+    timeout: 10000
+
+  - id: scope
+    bash: |
+      ISSUE=$(printf '%s' "$ARGUMENTS" | grep -oE '[0-9]+' | head -1)
+      if [ -z "$ISSUE" ]; then
+        echo "no issue number — pass as workflow argument"
+        exit 1
+      fi
+      gh issue view "$ISSUE" --json number,title,body,labels
+    timeout: 60000
+    depends_on: [check-deps]
+
+  - id: load-invariants
+    bash: 'cat .archon/invariants.yaml'
+    depends_on: [check-deps]
+
+  - id: implement
+    # Preloads invariants so generated code is compliant on the first pass.
+    # Adapt the instructions + your project's build/test commands here.
+    prompt: |
+      Implement a fix for the issue below on a new branch.
+
+      ## Issue
+      $scope.output
+
+      ## Review invariants you MUST satisfy (.archon/invariants.yaml)
+      $load-invariants.output
+
+      Write the minimal change that resolves the issue and upholds every
+      invariant whose trigger_paths your changed files match. Keep the diff
+      surgical.
+    depends_on: [scope, load-invariants]
+    context: fresh
+
+  - id: verify
+    # Replace with your real build/test command(s).
+    bash: |
+      echo "TODO: run your build + tests here, e.g. npm run build && npm test"
+    timeout: 600000
+    depends_on: [implement]
+
+  - id: self-review
+    prompt: |
+      Review your own diff against the invariants before opening the PR. Report
+      any violations and fix them.
+
+      ## Invariants
+      $load-invariants.output
+    depends_on: [verify, load-invariants]
+    context: fresh
+
+  - id: open-pr
+    bash: |
+      git push -u origin HEAD
+      gh pr create --draft --fill
+    timeout: 120000
+    depends_on: [self-review]

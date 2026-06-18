@@ -1,0 +1,31 @@
+name: Performance issue
+description: Report a perf regression or bottleneck
+title: "[Perf] "
+labels: ["perf"]
+body:
+  - type: input
+    id: metric
+    attributes:
+      label: Metric
+      placeholder: e.g. p95 latency, memory RSS, CPU %
+    validations:
+      required: true
+  - type: input
+    id: baseline
+    attributes:
+      label: Baseline
+      placeholder: e.g. 120ms before commit X
+    validations:
+      required: true
+  - type: input
+    id: target
+    attributes:
+      label: Target
+      placeholder: e.g. <= 50ms
+  - type: textarea
+    id: method
+    attributes:
+      label: Measurement method
+      placeholder: How did you measure? What tooling?
+    validations:
+      required: true

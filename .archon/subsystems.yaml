@@ -1,0 +1,11 @@
+# Your subsystem taxonomy — placeholder examples.
+#
+# Subsystems group changes into review/issue domains. Replace these rows with
+# the real divisions of your codebase, then mirror the ids into
+# .github/labels.yml so issues and PRs can be labelled consistently.
+
+subsystems:
+  - id: backend
+    description: Server, API routes, services, persistence
+  - id: frontend
+    description: UI components, pages, client state

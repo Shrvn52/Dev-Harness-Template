@@ -1,0 +1,23 @@
+name: Chore
+description: Test coverage, docs, CI, refactoring, tooling
+title: "[Chore] "
+labels: ["chore"]
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind
+      options:
+        - test
+        - docs
+        - ci
+        - refactor
+        - tooling
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+    validations:
+      required: true

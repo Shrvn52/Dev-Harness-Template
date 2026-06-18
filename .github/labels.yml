@@ -1,0 +1,81 @@
+# Kind (mutually exclusive in practice)
+- name: bug
+  color: 'd73a4a'
+  description: Something isn't working
+- name: perf
+  color: 'ff9800'
+  description: Performance regression or bottleneck
+- name: feature
+  color: '0e8a16'
+  description: New feature request
+- name: enhancement
+  color: 'a2eeef'
+  description: Improvement to existing feature
+- name: chore
+  color: 'cccccc'
+  description: Tooling, infra, non-functional work
+- name: docs
+  color: '0075ca'
+  description: Documentation change
+- name: test
+  color: '7057ff'
+  description: Test coverage addition or fix
+- name: refactor
+  color: '5319e7'
+  description: Code restructure, no behavior change
+
+# Priority
+- name: p0
+  color: 'b60205'
+  description: Drop everything, fix now
+- name: p1
+  color: 'd93f0b'
+  description: Strongly recommended before release
+- name: p2
+  color: 'fbca04'
+  description: Cleanup / nice-to-have
+- name: p3
+  color: 'c2e0c6'
+  description: Someday / backlog
+
+# Scope
+- name: v1.next
+  color: '1d76db'
+  description: Targeted for next minor release
+- name: epic
+  color: '3e4b9e'
+  description: Spans multiple PRs or child issues
+- name: backlog
+  color: 'e6e6e6'
+  description: Captured but not yet scheduled
+- name: good first issue
+  color: '7057ff'
+  description: Good for newcomers
+- name: help wanted
+  color: '008672'
+  description: Extra attention appreciated
+
+# Subsystem (sync from .archon/subsystems.yaml)
+#
+# Add your project's subsystem labels here — one per architectural area
+# (e.g. frontend, backend, api, db, ci). Keep this list in lockstep with
+# .archon/subsystems.yaml so issue auto-labelling and workflow taxonomy agree.
+# Convention: color 'ededed' (neutral grey) so Kind/Priority/Scope stay visually dominant.
+#
+# - name: <subsystem>
+#   color: 'ededed'
+#   description: <one-line scope of this subsystem>
+
+# Meta
+- name: blocked
+  color: '000000'
+  description: Cannot progress — external dependency
+- name: duplicate
+  color: 'cfd3d7'
+  description: Duplicate of another issue
+- name: wontfix
+  color: 'ffffff'
+  description: Intentionally not going to fix
+- name: needs-repro
+  color: 'fbca04'
+  description: Cannot reproduce — more info needed

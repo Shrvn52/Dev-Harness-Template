@@ -1,0 +1,30 @@
+{
+  "name": "dev-harness-template",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Agentic-development harness template — guardrails wired and green on clone.",
+  "engines": {
+    "node": ">=20 <23",
+    "npm": ">=10 <12"
+  },
+  "scripts": {
+    "dev": "node tools/dev.mjs",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build && cd ../backend && npm run build",
+    "start": "cd backend && npm start",
+    "test": "cd backend && npm test && cd ../frontend && npm test",
+    "test:backend": "cd backend && npm test",
+    "test:frontend": "cd frontend && npm test",
+    "test:integration": "cd backend && npx vitest run ../tests/integration",
+    "test:ui": "CC_INTEGRATION=1 playwright test e2e/ui",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.1",
+    "@typescript-eslint/eslint-plugin": "^8.20.0",
+    "@typescript-eslint/parser": "^8.20.0",
+    "eslint": "^9.18.0",
+    "eslint-plugin-react-hooks": "^5.1.0"
+  }
+}

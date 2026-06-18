@@ -1,0 +1,26 @@
+name: Feature request
+description: Propose a new feature or enhancement
+title: "[Feature] "
+labels: ["feature"]
+body:
+  - type: textarea
+    id: user-story
+    attributes:
+      label: User story
+      placeholder: As a <role>, I want <capability>, so that <outcome>.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      placeholder: |
+        - [ ]
+        - [ ]
+    validations:
+      required: true
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: Out of scope
+      description: What is explicitly NOT included in this feature?

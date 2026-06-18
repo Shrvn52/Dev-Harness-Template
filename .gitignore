@@ -1,0 +1,32 @@
+# ── Build output ────────────────────────────────────────────────────────────
+node_modules/
+dist/
+*.tsbuildinfo
+.vite/
+
+# ── Local data / env ─────────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+backend/.data.db
+backend/.data.db-*
+
+# ── Test / tooling artifacts ─────────────────────────────────────────────────
+coverage/
+playwright-report/
+test-results/
+.worktrees/
+
+# ── OS / editor / local tool caches ──────────────────────────────────────────
+.DS_Store
+*.log
+.impeccable/
+
+# ── Claude Code: machine-local, NEVER committed ──────────────────────────────
+# The committed .claude/ harness (settings.json, hooks, agents, commands, skills)
+# travels with the repo. These accrete per-machine and must stay local:
+.claude/settings.local.json
+.claude/worktrees/
+.claude/launch.json
+.claude/*.lock
+.claude/workflows/
