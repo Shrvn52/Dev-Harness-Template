@@ -11,6 +11,11 @@ concurrency:
 
 permissions:
   contents: read
+  # pull-requests: read is required on `pull_request` events by the API calls that
+  # dorny/paths-filter (listFiles, in the `changes` job) and gitleaks-action
+  # (GET /pulls/:n/commits, in `secret-scan`) make — without it both 403 with
+  # "Resource not accessible by integration". Read-only; no write scope needed.
+  pull-requests: read
 
 jobs:
   # ────────────────────────────────────────────────────────────────
