@@ -41,13 +41,23 @@ examples to adapt.
 - Node **22** (pinned in `.nvmrc`) · npm 10+
 - For the UI E2E tier: `npx playwright install chromium`
 
+## Use this template
+
+1. Click **Use this template → Create a new repository** (top of the GitHub page), or
+   `gh repo create <you>/<name> --template Shrvn52/Dev-Harness-Template`.
+2. Clone your new repo, then: `nvm use` → `npm ci` → `npm ci --prefix backend` →
+   `npm ci --prefix frontend`.
+3. Confirm green: `npm run lint && npm run typecheck && npm test`.
+4. Replace the `items` example with your own domain following the swap table in
+   [`docs/SETUP.md`](docs/SETUP.md) — the arch tests and typecheck catch anything you miss.
+
 ## Quickstart
 
 ```bash
 nvm use                      # Node 22
-npm install                  # root tooling (eslint, playwright)
-npm install --prefix backend
-npm install --prefix frontend
+npm ci                       # root tooling (eslint, playwright, typecheck deps)
+npm ci --prefix backend
+npm ci --prefix frontend
 
 npm run dev                  # backend :8137 + frontend :5173
 
@@ -59,6 +69,10 @@ npx playwright install chromium && npm run build && npm run test:ui   # UI E2E
 ```
 
 Everything above is green on a fresh clone — the wiring **is** the documentation.
+
+> Use `npm ci` for a **reproducible** install from the committed lockfile (what CI
+> runs, and what the `lockfile-drift` guard protects). Reach for `npm install <pkg>`
+> only when you are **intentionally adding or bumping a dependency**.
 
 ## Where to go next
 

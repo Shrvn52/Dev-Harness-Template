@@ -1,0 +1,18 @@
+{
+  // Type-checks the cross-cutting `tests/` tier (+ the backend src and shared it
+  // imports) — surfaces NONE of the runtime tiers reach: Vitest (esbuild) strips
+  // types without checking, so a type error in a test or arch file passes every
+  // other gate. The test-only bare specifiers (vitest, hono, zod, …) live in root
+  // devDependencies precisely so `tests/` resolves them here; do NOT `paths`-remap
+  // them into backend/node_modules — a new test-only import would then silently
+  // bypass this gate with a confusing TS2307-on-an-installed-module.
+  // The frontend test surface needs JSX/DOM libs + jest-dom — it has its own
+  // frontend/tsconfig.typecheck.json.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": { "@shared/*": ["shared/*"] }
+  },
+  "include": ["tests", "shared", "backend/src"]
+}

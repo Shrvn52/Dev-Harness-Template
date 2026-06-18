@@ -23,9 +23,22 @@ npm test
 
 # 4. Integration harness — drives the real Hono app via buildApp(), in-memory SQLite
 npm run test:integration
+
+# 5. Typecheck — the tests-inclusive type gate (vitest's esbuild never type-checks);
+#    covers tests/ + shared + backend/src and the frontend test surface
+npm run typecheck
 ```
 
-All four must exit 0.
+All five must exit 0.
+
+## Built-artifact smoke (after a build)
+
+```bash
+# Boots the real backend/dist artifact under Node ESM, hits /api/health + /api/items.
+npm run test:smoke:dist
+```
+
+Needs `npm run build` to have run first (lane 2). Mirrors the smoke step CI runs in the backend job.
 
 ## UI tier (conditional)
 

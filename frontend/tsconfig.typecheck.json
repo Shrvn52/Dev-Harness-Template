@@ -1,0 +1,9 @@
+{
+  // Type-checks the frontend TEST surface (src/**/*.test.tsx + src/test-setup.ts),
+  // which frontend/tsconfig.json deliberately excludes. Can't fold into the root
+  // typecheck config: these files need `jsx: react-jsx`, the DOM lib, and the
+  // @testing-library/jest-dom matcher augmentation. Identical to tsconfig.json
+  // except the three test excludes are dropped (node_modules/dist stay excluded).
+  "extends": "./tsconfig.json",
+  "exclude": ["node_modules", "dist"]
+}

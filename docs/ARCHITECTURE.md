@@ -53,10 +53,19 @@ and lockfile. The trade is deliberate:
 - **Each package owns its toolchain.** The backend pins `tsx`/`vitest`/`better-sqlite3`;
   the frontend pins `vite`/`@vitejs/plugin-react`/`jsdom`. Neither hoists into a
   shared root tree, so a frontend dep bump can't silently shift a backend
-  transitive, and the root dep tree stays tiny (only Playwright + ESLint live there).
+  transitive. The root tree holds Playwright, ESLint, **and the test-only type deps the
+  cross-cutting `tests/` tier imports** (`hono`, `@hono/node-server`, `vitest`, `zod`,
+  `@types/better-sqlite3`, `typescript`) — the accepted cost of the tests-inclusive
+  `npm run typecheck` gate (`tsconfig.typecheck.json`), since files under `tests/`
+  resolve bare specifiers from the root `node_modules`. **`hono` is pinned to an exact
+  version matching `backend/`** (not a caret): the root typecheck also checks `backend/src`,
+  whose `hono` resolves from `backend/node_modules`, and a `Context` type flows across the
+  test↔backend boundary — a version skew between the two trees makes the two `Hono` types
+  non-assignable and reds the gate on otherwise-correct code. Keep the pin in sync on a
+  deliberate `hono` bump.
 - **A package is liftable.** Because nothing depends on workspace hoisting, you can
   copy `backend/` out to its own repo without untangling a hoisted graph.
-- **`npm install` runs three times** (root, backend, frontend) — the one cost. The
+- **`npm ci` runs three times** (root, backend, frontend) — the one cost. The
   `tools/dev.mjs` launcher exists for the same "no shared root deps" reason: it
   replaces `concurrently` with a zero-dependency `spawn` so the root tree stays
   `npm audit`-clean on a fresh clone.
@@ -330,7 +339,12 @@ shape as the route registry:
    a transaction.
 4. **An arch test** asserts every migration file appears in the array (copy
    `registry-coverage.test.ts` and re-point it) — so a dropped-in file that nobody
-   registered fails CI.
+   registered fails CI. The test now checks **both directions**: registry→backing
+   (a registered entry must have a file) AND backing→registry (every `routes/*.ts`
+   router file must be imported by the registry). The reverse check matches the
+   `'./<base>.js'` import specifier in `registry.ts` source, not the on-disk `.ts`
+   name — NodeNext ESM imports carry `.js`. Implied convention it enforces: **`routes/`
+   holds only router files**; non-router helpers belong in `lib/`.
 
 The seam is already in the right place: `runMigrations` is the single entry both `db.ts`
 and the test harness call, so swapping its body for a registry walk requires no caller

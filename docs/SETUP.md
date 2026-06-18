@@ -13,7 +13,7 @@ then the example domain ripped out and replaced with yours.
   reason not to.
 - **npm 10+** — ships with Node 22.
 - A C toolchain for `better-sqlite3`'s native build. On most Linux/macOS dev machines
-  this is already present (build-essential / Xcode CLT); `npm install` will compile
+  this is already present (build-essential / Xcode CLT); `npm ci` will compile
   the binding.
 
 Verify:
@@ -32,11 +32,15 @@ This is a **cd-delegation monorepo, not npm workspaces** (see
 `node_modules`, so you install in **three** places:
 
 ```bash
-npm install                    # root — Playwright + ESLint
-cd backend && npm install      # Hono, better-sqlite3, zod, tsx, vitest
-cd ../frontend && npm install  # React 19, Vite 6, Tailwind v4, TanStack Query
+npm ci                    # root — Playwright, ESLint, typecheck deps
+cd backend && npm ci      # Hono, better-sqlite3, zod, tsx, vitest
+cd ../frontend && npm ci  # React 19, Vite 6, Tailwind v4, TanStack Query
 cd ..
 ```
+
+`npm ci` does a clean, **reproducible** install from the committed lockfile — what CI
+runs, and what the `lockfile-drift` guard protects. Use `npm install <pkg>` only when
+you are **intentionally adding or bumping a dependency** (it rewrites the lockfile).
 
 If you intend to run the **UI end-to-end tier**, install the Chromium browser
 Playwright drives (one-time, after the root install):

@@ -41,8 +41,10 @@ Run from the repo root. (cd-delegation monorepo — root scripts shell into the 
 | `npm run build` | Frontend (`tsc` + vite) then backend (`tsc` → `backend/dist/`). |
 | `npm start` | Run the built backend (`node dist/backend/src/index.js`). |
 | `npm run lint` | `eslint .` — the mechanical conventions. |
+| `npm run typecheck` | Tests-inclusive type gate — `tsc --noEmit` over `tests/` + `shared` + `backend/src` and the frontend test surface (Vitest's esbuild never type-checks). |
 | `npm test` | Node tiers (unit + integration + arch) then the frontend jsdom tier. |
 | `npm run test:integration` | API integration tier only. |
+| `npm run test:smoke:dist` | Boot the built `backend/dist` artifact under real Node ESM and hit `/api/health` + `POST /api/items` (needs `npm run build` first; zero-dep `tools/smoke.mjs`). |
 | `npm run test:ui` | Playwright UI E2E (needs a built frontend + `npx playwright install chromium`). |
 
 This table is the SSOT for "the one right command". It must match `package.json`
@@ -75,6 +77,12 @@ scripts exactly — the docs-audit skill checks for drift.
   The frontend is bundled by Vite, which honours the alias. The `@shared` alias must be
   declared in **three** resolvers (`frontend/tsconfig.json`, `frontend/vite.config.ts`,
   `frontend/vitest.config.ts`) — miss one and imports break in some contexts only.
+  **DON'T** delete `shared/package.json` (`{"type":"module"}`): the backend builds under
+  `nodenext`, which decides a file's emit format from the *source's* governing
+  `package.json`. `shared/*.ts` falls under the **root** `package.json` (no `type:module`),
+  so without this marker tsc emits `shared/` as **CommonJS** and the ESM backend's
+  `import { rowToItem }` crashes at `npm start` with "does not provide an export" — a break
+  every compile-time gate passes and only `npm run test:smoke:dist` catches.
 - **Errors flow through one mapper.** Throw a typed error from `backend/src/lib/errors.ts`;
   `routeErrorHandler` (attached by `createRouter()`) maps it to `{ error: string }` + the
   right status. **DON'T** `throw new Error()` in `backend/src` — a lint selector blocks it.
