@@ -12,7 +12,19 @@
 set -uo pipefail
 
 PAYLOAD=$(cat)
-command -v jq >/dev/null 2>&1 || exit 0
+if ! command -v jq >/dev/null 2>&1; then
+  # jq drives payload parsing, so without it this hook is silently inert — the user
+  # believes lint is active when it isn't. Surface that ONCE per session, then no-op.
+  # $PPID is stable here: CC spawns every PostToolUse hook as a child of the single
+  # long-lived `claude` process, so the sentinel fires once-per-session, not per-edit.
+  # (Don't switch the key to session_id — parsing it needs jq, which is what's missing.)
+  SENTINEL="/tmp/cc-lint-hook-warned.$PPID"
+  if [[ ! -e "$SENTINEL" ]]; then
+    echo "[hook: post-edit-lint] jq not found — the post-edit lint hook is inert this session; inline lint feedback is OFF. Install jq to re-enable it." >&2
+    : > "$SENTINEL" 2>/dev/null || true
+  fi
+  exit 0
+fi
 
 FILE=$(printf '%s' "$PAYLOAD" | jq -r '.tool_input.file_path // empty' 2>/dev/null)
 [[ -z "$FILE" ]] && exit 0
