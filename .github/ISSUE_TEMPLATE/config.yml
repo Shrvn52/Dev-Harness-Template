@@ -1,5 +1,6 @@
 blank_issues_enabled: true
 contact_links:
   - name: Question / discussion
-    url: https://github.com/OWNER/REPO/discussions
+    # Template users: point this at your own repo and enable Discussions.
+    url: https://github.com/Shrvn52/Dev-Harness-Template/discussions
     about: For open-ended questions, use Discussions instead of an issue.

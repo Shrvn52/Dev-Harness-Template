@@ -2,7 +2,7 @@
 
 > **This directory is OPTIONAL and inert without an external runtime.**
 > Nothing here runs on its own. The workflows under `workflows/` are
-> [Archon](https://github.com/anthropics/archon) DAGs and require the Archon
+> [Archon](https://github.com/coleam00/archon) DAGs and require the Archon
 > CLI installed and on `PATH`. If you don't use Archon, **delete this entire
 > directory** — `rm -rf .archon/`. Removing it costs you nothing else in the
 > template; no other code reads these files.
