@@ -185,12 +185,14 @@ jobs:
   # ────────────────────────────────────────────────────────────────
   # Secret scan — cheap leak insurance for a widely-cloned template;
   # reinforces the repo's "don't leak" ethos. fetch-depth: 0 so gitleaks
-  # sees full history. Only the auto-provided GITHUB_TOKEN is needed.
-  # NOTE: gitleaks-action needs a GITLEAKS_LICENSE only for ORG-owned
-  # repos — this repo is personal-account-owned, so none is required. If
-  # it is ever transferred to an org, the license becomes mandatory.
-  # Pinned @v3 (the current major): @v2 runs on the deprecated Node 20
-  # action runtime and hard-fails on current GitHub-hosted runners.
+  # sees full history. Runs the pinned gitleaks CLI directly against FULL
+  # history (--log-opts=--all) instead of gitleaks-action: the action
+  # derives a `firstCommit^..lastCommit` range from the push/PR event,
+  # which is unresolvable when the range includes the root commit (its
+  # `^` parent doesn't exist) — that breaks on an initial push or after a
+  # history rewrite, and every "Use this template" clone's first push. A
+  # whole-history CLI scan is range-independent, needs no license/token,
+  # and still exits non-zero on any real finding.
   # ────────────────────────────────────────────────────────────────
   secret-scan:
     runs-on: ubuntu-latest
@@ -199,6 +201,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v3
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: gitleaks (full-history scan)
+        run: |
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.24.3/gitleaks_8.24.3_linux_x64.tar.gz \
+            | tar -xz -C /tmp gitleaks
+          /tmp/gitleaks detect --source . --log-opts=--all --redact -v --exit-code 1
