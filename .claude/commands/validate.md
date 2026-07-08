@@ -35,7 +35,8 @@ All five must exit 0.
 ## Built-artifact smoke (after a build)
 
 ```bash
-# Boots the real backend/dist artifact under Node ESM, hits /api/health + /api/items.
+# Boots the real backend/dist artifact under Node ESM, hits /api/health, and
+# imports dist/shared as real ESM (domain-neutral — survives example deletion).
 npm run test:smoke:dist
 ```
 

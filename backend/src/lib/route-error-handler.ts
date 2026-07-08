@@ -1,6 +1,7 @@
 import type { Context } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { AppError } from './errors.js';
+import { logger } from './logger.js';
 
 /**
  * Hono onError handler — converges every thrown error to one wire shape:
@@ -26,7 +27,6 @@ export function routeErrorHandler(err: Error, c: Context) {
     return c.json({ error: err.message }, err.status as ContentfulStatusCode);
   }
   // Unknown error — log the stack for diagnosis, never leak internals to the client.
-  // eslint-disable-next-line no-console -- unknown-error fallback diagnostic; this file is the documented exception (CLAUDE.md → Conventions) and the sole allow-listed entry in tests/arch/ratchet-allowlist.test.ts
-  console.error('[unhandled]', err.stack ?? err.message);
+  logger.error('unhandled error', { stack: err.stack ?? err.message });
   return c.json({ error: 'Internal server error' }, 500);
 }

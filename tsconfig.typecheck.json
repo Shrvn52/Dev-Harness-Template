@@ -11,9 +11,7 @@
   // frontend/tsconfig.typecheck.json.
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "noEmit": true,
-    "baseUrl": ".",
-    "paths": { "@shared/*": ["shared/*"] }
+    "noEmit": true
   },
   "include": ["tests", "shared", "backend/src", "e2e", "playwright.config.ts"]
 }

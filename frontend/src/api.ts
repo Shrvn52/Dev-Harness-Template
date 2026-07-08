@@ -1,4 +1,4 @@
-import type { Item } from '@shared/types';
+import type { Item } from '../../shared/types';
 
 // Data layer. The dev server + preview proxy `/api` to the backend (see
 // vite.config.ts). This is also the seam where an offline-first project would

@@ -1,6 +1,9 @@
 /**
  * Shared cross-boundary types — the single source of truth consumed by BOTH
- * backend (relative import: `../../shared/types.js`) and frontend (`@shared/types`).
+ * backend (`../../shared/types.js`) and frontend (`../../shared/types`). Both
+ * sides import RELATIVELY — no alias to keep in sync across resolvers. Only the
+ * extension differs: the backend emits real ESM (NodeNext needs `.js`), the
+ * frontend is bundled (extensionless).
  *
  * The `no-duplicate-shared-exports` arch test forbids re-declaring any name
  * exported here inside `backend/src/` or `frontend/src/` — import it, don't copy it.

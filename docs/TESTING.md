@@ -49,10 +49,12 @@ verification:
   it is exercised; network calls should be mocked at the boundary and the real
   behaviour verified manually.
 - **Cross-process / cross-host flows.** Anything spanning more than one process.
-- **Deep production-build runtime.** The `npm run test:smoke:dist` lane now boots the
-  real `tsc`-emitted `backend/dist` bundle under Node's NodeNext ESM resolver and hits
-  `/api/health` + `POST /api/items`, so a broken module-resolution / ESM-emit regression
-  is caught (Vitest's esbuild transpile and `tsx` would miss it). It is a _smoke_, not a
-  full suite: only the health probe and one create are asserted against the built artifact.
+- **Deep production-build runtime.** The `npm run test:smoke:dist` lane boots the
+  real `tsc`-emitted `backend/dist` bundle under Node's NodeNext ESM resolver, hits
+  `/api/health`, and imports every emitted `dist/shared` module — so a broken
+  module-resolution / ESM-emit regression is caught (Vitest's esbuild transpile and
+  `tsx` would miss it). It is deliberately **domain-neutral**: it never touches an
+  example route, so deleting the items domain cannot break it. It is a _smoke_, not
+  a full suite — your domain's routes are asserted by the integration tier, not here.
 
 When you touch one of these surfaces, verify it by hand and say so in the PR.

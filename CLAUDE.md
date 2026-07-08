@@ -155,8 +155,9 @@ Three tiers. Drift in tier 1 is a CI failure, not a review nit.
 
 **2 — Documented exceptions** (must carry an inline `eslint-disable` + rationale):
 
-- `backend/src/lib/route-error-handler.ts` uses `console.error` for the unknown-error
-  fallback — the one allow-listed `eslint-disable` (and the anchor of the ratchet test).
+- Currently NONE — the ratchet allowlist is empty, which is its goal state. A new
+  entry needs a rationale comment at the disable site AND an allowlist entry with
+  the exact count (`tests/arch/ratchet-allowlist.test.ts`).
 
 **3 — Prose, promote on next leak** (not yet mechanical — make it tier 1 when it recurs):
 

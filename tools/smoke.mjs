@@ -1,12 +1,22 @@
 #!/usr/bin/env node
 // Zero-dependency built-artifact smoke test. Boots the REAL compiled backend
 // (node dist/backend/src/index.js) under Node's NodeNext ESM resolver — the one
-// thing tsc/vitest/CI never exercised — then hits the live HTTP surface. Mirrors
-// tools/dev.mjs's node:child_process pattern so the root tree stays audit-clean
-// (no concurrently/curl/shell). Run after `npm run build`.
+// thing tsc/vitest/CI never exercised — then probes the surfaces that only break
+// at real-ESM runtime. Run after `npm run build`.
+//
+// DOMAIN-NEUTRAL by design: it touches /api/health and dist/shared only — never
+// an example route. Deleting the items domain (the template's intended first
+// move) must not break a harness-owned lane.
+//
+// The dist/shared import is the canary for the template's one documented emit
+// trap: without shared/package.json's {"type":"module"}, tsc emits shared/ as
+// CommonJS and the ESM backend crashes importing it — a break every compile-time
+// gate passes. Importing every emitted shared module here catches it even when
+// no runtime route happens to import shared.
 import { spawn } from 'node:child_process';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { dirname, resolve, join } from 'node:path';
+import { readdirSync } from 'node:fs';
+import { pathToFileURL, fileURLToPath } from 'node:url';
 
 const PORT = 8138; // avoid the 8137 default so a running dev server doesn't collide
 const BASE = `http://127.0.0.1:${PORT}`;
@@ -14,6 +24,7 @@ const BASE = `http://127.0.0.1:${PORT}`;
 // dist/. Resolve from this file so cwd doesn't matter, and run with cwd: backend.
 const backendDir = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'backend');
 const entry = resolve(backendDir, 'dist/backend/src/index.js');
+const sharedDist = resolve(backendDir, 'dist/shared');
 
 let ready = false;
 let shuttingDown = false;
@@ -55,7 +66,7 @@ async function run(settle) {
   try {
     await pollHealth();
     ready = true;
-    await createItem();
+    await importSharedDist();
     settle(true, null);
   } catch (err) {
     settle(false, err.message);
@@ -89,14 +100,22 @@ async function pollHealth() {
   throw new Error(`backend never became healthy within 5s (last: ${lastErr})`);
 }
 
-async function createItem() {
-  const res = await fetch(`${BASE}/api/items`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ title: 'smoke' }),
-  });
-  if (res.status !== 201) {
-    throw new Error(`POST /api/items expected 201, got ${res.status}`);
+async function importSharedDist() {
+  let files;
+  try {
+    files = readdirSync(sharedDist).filter((f) => f.endsWith('.js'));
+  } catch {
+    throw new Error(`no dist/shared emitted at ${sharedDist} — run \`npm run build\` first`);
+  }
+  if (files.length === 0) {
+    throw new Error('dist/shared contains no .js modules — the shared emit is broken');
+  }
+  for (const f of files) {
+    // A CJS-emitted module (the type:module trap) throws right here under real ESM.
+    const mod = await import(pathToFileURL(join(sharedDist, f)).href);
+    if (Object.keys(mod).length === 0) {
+      throw new Error(`dist/shared/${f} imported but exposes no exports — emit is broken`);
+    }
   }
 }
 
@@ -113,5 +132,7 @@ function teardown() {
 const ok = await done;
 teardown();
 if (ok)
-  process.stdout.write('[smoke] built artifact booted and served /api/health + /api/items ✓\n');
+  process.stdout.write(
+    '[smoke] built artifact booted, served /api/health, and dist/shared imports as real ESM ✓\n',
+  );
 process.exit(ok ? 0 : 1);

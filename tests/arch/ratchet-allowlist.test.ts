@@ -24,9 +24,12 @@ const MARKER = /eslint-disable/g;
 // Files permitted to carry eslint-disable directives, with their EXACT count.
 // Shrink only — never raise a count or append an entry to silence a new
 // violation. Each entry should be a DOCUMENTED exception.
-const ALLOWLIST: ReadonlyArray<{ file: string; count: number }> = [
-  { file: 'backend/src/lib/route-error-handler.ts', count: 1 },
-];
+//
+// EMPTY is the goal state, and this repo is in it: zero disables anywhere.
+// (The last one — route-error-handler's console.error fallback — was retired
+// by wiring lib/logger.ts in. Retrofitting onto a codebase with existing debt?
+// Seed this list from a scan and shrink from there.)
+const ALLOWLIST: ReadonlyArray<{ file: string; count: number }> = [];
 
 function rel(f: string): string {
   return relative(REPO_ROOT, f).split('\\').join('/');
@@ -47,8 +50,9 @@ describe('Architecture — eslint-disable ratchet (shrink-only, per-occurrence)'
   );
   const allowed = new Map(ALLOWLIST.map((e) => [e.file, e.count]));
 
-  it('the allowlist is non-empty (sanity floor — the 3-way check runs against real data)', () => {
-    expect(ALLOWLIST.length).toBeGreaterThan(0);
+  it('the scan sees real files (sanity floor — an empty walk would pass vacuously)', () => {
+    const scanned = SCAN_ROOTS.flatMap((root) => walkTs(join(REPO_ROOT, ...root.split('/'))));
+    expect(scanned.length).toBeGreaterThan(0);
   });
 
   it('no NEW debt: every file with an eslint-disable is on the allowlist', () => {

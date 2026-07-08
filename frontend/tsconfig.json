@@ -4,10 +4,7 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
     "types": ["vite/client"],
-    "noEmit": true,
-    "paths": {
-      "@shared/*": ["../shared/*"]
-    }
+    "noEmit": true
   },
   "include": ["src", "../shared"],
   "exclude": ["node_modules", "dist", "src/**/*.test.ts", "src/**/*.test.tsx", "src/test-setup.ts"]
