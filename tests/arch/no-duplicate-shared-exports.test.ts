@@ -3,7 +3,7 @@
  *
  * Why: a name shared across the boundary must have ONE source. Two definitions
  * (e.g. a `STATUS_COLORS` in shared/ and another in frontend/) drift silently.
- * Re-exports (`export { X } from '@shared/...'`) are allowed — only fresh
+ * Re-exports (`export { X } from '../../shared/...'`) are allowed — only fresh
  * declarations of the same identifier are flagged.
  *
  * Detection is AST-based (TS compiler API), not line-regex: it sees inline

@@ -1,17 +1,19 @@
 # Testing
 
-Four tiers, all green on a fresh clone. Each catches a different class of bug; the
-table says which command runs it and what it can and can't see.
+Every tier green on a fresh clone (`npm run gate` runs them all except E2E). Each
+catches a different class of bug; the table says which command runs it and what it
+can and can't see.
 
-| Tier            | Location             | Command                                   | Runner        | Catches                                                                                                                              |
-| --------------- | -------------------- | ----------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| **Unit**        | `tests/unit/`        | `npm test`                                | Vitest (node) | Pure-function logic. Fast, numerous.                                                                                                 |
-| **Integration** | `tests/integration/` | `npm run test:integration`                | Vitest (node) | Route + schema + wiring bugs, against the **real** app via `buildApp()` + an in-memory DB via `setDb()`.                             |
-| **Arch**        | `tests/arch/`        | `npm test`                                | Vitest (node) | Architecture drift — executable fitness functions (duplicate shared exports, registry coverage, the debt ratchet, forbidden tokens). |
-| **E2E**         | `e2e/`               | `npm run test:ui` / `npx playwright test` | Playwright    | The real frontend in a real browser + the real server over HTTP.                                                                     |
+| Tier            | Location                     | Command                                   | Runner         | Catches                                                                                                  |
+| --------------- | ---------------------------- | ----------------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------- |
+| **Unit**        | `tests/unit/`                | `npm test`                                | Vitest (node)  | Pure-function logic. Fast, numerous.                                                                     |
+| **Integration** | `tests/integration/`         | `npm run test:integration`                | Vitest (node)  | Route + schema + wiring bugs, against the **real** app via `buildApp()` + an in-memory DB via `setDb()`. |
+| **Arch**        | `tests/arch/`                | `npm test`                                | Vitest (node)  | Architecture drift — executable fitness functions (see the directory for the current inventory).         |
+| **Frontend**    | `frontend/src/**/*.test.tsx` | `npm test` / `npm run test:frontend`      | Vitest (jsdom) | Component rendering + data-layer behavior through real providers (Testing Library).                      |
+| **E2E**         | `e2e/`                       | `npm run test:ui` / `npx playwright test` | Playwright     | The real frontend in a real browser + the real server over HTTP.                                         |
 
-`npm test` runs unit + integration + arch (the node tiers) for backend, then the
-jsdom tier for frontend. The two E2E commands are separate because they boot real
+`npm test` runs the backend node tiers (unit + integration + arch), then the
+frontend jsdom tier. The two E2E commands are separate because they boot real
 servers (and the UI lane needs a built frontend + `npx playwright install chromium`).
 
 ## The seams that make integration tests real, not mock theatre

@@ -17,12 +17,12 @@ see [`SETUP.md`](SETUP.md) → "First real step".)
 | Piece                                              | Why it survives                                                                         |
 | -------------------------------------------------- | --------------------------------------------------------------------------------------- |
 | `CLAUDE.md` + the docs                             | WHY/DON'T is stack-independent; update the tables it owns after a swap.                 |
-| `tests/arch/` (all four archetypes)                | Fitness tests over _your source files_ — they read the filesystem, not the framework.   |
+| `tests/arch/` (every archetype)                    | Fitness tests over _your source files_ — they read the filesystem, not the framework.   |
 | `eslint.config.mjs`                                | The promotion-loop home. Selectors reference _your_ canonical fixes; the shape carries. |
 | `.claude/` (hook, agents, commands, skills)        | Tooling-level, framework-blind. The post-edit hook runs eslint on any TS file.          |
 | `.github/workflows/` (lanes, filters, secret scan) | Update path filters if you rename dirs; the lane structure and drift guards carry.      |
-| `tools/dev.mjs` + `tools/smoke.mjs`                | Zero-dep spawn wrappers. Smoke needs its two probe URLs re-pointed (see below).         |
-| `shared/` + the two-import-style convention        | Any TS front/back split has this boundary. Keep `shared/package.json` (`type: module`). |
+| `tools/dev.mjs` + `tools/smoke.mjs`                | Zero-dep spawn wrappers. Smoke is domain-neutral (health + dist/shared import).         |
+| `shared/` + the relative-import convention         | Any TS front/back split has this boundary. Keep `shared/package.json` (`type: module`). |
 | The test taxonomy (unit/integration/arch/e2e)      | Tier boundaries and "what each tier doesn't cover" are stack-free ideas.                |
 
 **Stack — replace wholesale, don't abstract:**
@@ -66,8 +66,9 @@ see [`SETUP.md`](SETUP.md) → "First real step".)
    names Hono-specific plumbing.
 3. Re-implement input validation as your framework's Zod hook (the invariant is
    "mutation input is validated by Zod, never hand-parsed", not "use zValidator").
-4. Re-point the boot probes: `tools/smoke.mjs` hits `/api/health` + `POST /api/items`
-   on the built artifact; `playwright.config.ts` boots the dev entry.
+4. Re-point the boot probes: `tools/smoke.mjs` hits `/api/health` on the built
+   artifact (keep an equivalent liveness route, or re-point the probe);
+   `playwright.config.ts` boots the dev entry.
 5. The NodeNext emit constraints (relative `shared/` imports with `.js` extensions,
    `shared/package.json`) are about **tsc**, not Hono — they carry unchanged.
 
@@ -75,9 +76,10 @@ see [`SETUP.md`](SETUP.md) → "First real step".)
 
 1. `frontend/` is self-contained — replace it wholesale. The backend knows nothing
    about it (the dev-time `/api` proxy lives in `vite.config.ts`).
-2. Keep the `@shared` alias idea; declare it in your new toolchain's resolvers (the
-   "three places" gotcha in `ARCHITECTURE.md` generalizes: _every_ resolver that sees
-   the import needs the alias).
+2. Keep importing `shared/` RELATIVELY (see `ARCHITECTURE.md` → "Relative imports
+   on BOTH sides") — if your new toolchain pushes you toward an alias, remember the
+   rule that killed it here: _every_ resolver that sees the import needs the
+   declaration, and each one is a place to drift.
 3. Guardrails touched: the `no-duplicate-shared-exports` arch test scans
    `frontend/src` by path — update the path if you rename the dir; the eslint
    frontend block and CI `frontend`/`e2e` path filters likewise.
@@ -90,6 +92,5 @@ Run the full gate and the docs-audit skill — a layer swap is exactly the kind 
 change that strands WHAT/WHERE claims in the docs:
 
 ```bash
-npm ci && npm run lint && npm run format:check && npm run typecheck && npm run build \
-  && npm test && npm run test:smoke:dist && npx playwright test
+npm ci && npm run gate && npx playwright test
 ```

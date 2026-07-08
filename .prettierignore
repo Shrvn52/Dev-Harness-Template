@@ -5,7 +5,8 @@ package-lock.json
 playwright-report/
 test-results/
 
-# External tool's config tree — formatted on its own terms.
-
 # Archived plans are historical records; don't churn them.
 plans/archive/
+
+# docs-audit reports are generated output (also gitignored).
+audits/

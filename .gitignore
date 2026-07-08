@@ -17,6 +17,9 @@ coverage/
 playwright-report/
 test-results/
 .worktrees/
+# docs-audit skill reports — machine-generated, dated, local by default.
+# Commit one deliberately if you want the drift history in-repo.
+audits/
 
 # ── OS / editor / local tool caches ──────────────────────────────────────────
 .DS_Store
