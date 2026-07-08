@@ -6,6 +6,12 @@
  * Re-exports (`export { X } from '@shared/...'`) are allowed — only fresh
  * declarations of the same identifier are flagged.
  *
+ * Detection is AST-based (TS compiler API), not line-regex: it sees inline
+ * exported declarations (incl. `async`/`abstract`/multi-line/destructured),
+ * `export { localName }` lists, and `export default function Name`. Known,
+ * accepted blind spots: `export * from` (unenumerable without module
+ * resolution) and names introduced by module augmentation.
+ *
  * Archetype: SSOT-boundary guard. Copy this and re-point the roots for any
  * "single source of truth" you want to enforce.
  */
@@ -14,27 +20,59 @@ import { describe, it, expect } from 'vitest';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
+import ts from 'typescript';
 import { walkTs } from './_helpers/walk-ts.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, '..', '..');
 
-const EXPORT_PATTERNS = [
-  /^export\s+const\s+([A-Za-z_][A-Za-z0-9_]*)\b/,
-  /^export\s+function\s+([A-Za-z_][A-Za-z0-9_]*)\b/,
-  /^export\s+class\s+([A-Za-z_][A-Za-z0-9_]*)\b/,
-  /^export\s+enum\s+([A-Za-z_][A-Za-z0-9_]*)\b/,
-  /^export\s+interface\s+([A-Za-z_][A-Za-z0-9_]*)\b/,
-  /^export\s+type\s+([A-Za-z_][A-Za-z0-9_]*)\b/,
-];
+/** All names bound by a (possibly destructured) binding pattern. */
+function bindingNames(name: ts.BindingName): string[] {
+  if (ts.isIdentifier(name)) return [name.text];
+  const out: string[] = [];
+  for (const el of name.elements) {
+    if (ts.isBindingElement(el)) out.push(...bindingNames(el.name));
+  }
+  return out;
+}
 
+/**
+ * Names this file EXPORTS from a fresh local declaration. Deliberately
+ * excludes `export ... from '...'` (re-exports — the sanctioned pattern) and
+ * anonymous `export default` expressions (no name to collide with).
+ */
 function extractExports(file: string): Set<string> {
+  const sf = ts.createSourceFile(file, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true);
   const names = new Set<string>();
-  for (const line of readFileSync(file, 'utf8').split('\n')) {
-    const trimmed = line.trim();
-    for (const pat of EXPORT_PATTERNS) {
-      const m = trimmed.match(pat);
-      if (m && m[1]) names.add(m[1]);
+  const exported = (stmt: ts.Statement): boolean =>
+    ts.canHaveModifiers(stmt) &&
+    (ts.getModifiers(stmt) ?? []).some((m) => m.kind === ts.SyntaxKind.ExportKeyword);
+
+  for (const stmt of sf.statements) {
+    if (ts.isVariableStatement(stmt) && exported(stmt)) {
+      for (const d of stmt.declarationList.declarations) {
+        for (const n of bindingNames(d.name)) names.add(n);
+      }
+    } else if ((ts.isFunctionDeclaration(stmt) || ts.isClassDeclaration(stmt)) && exported(stmt)) {
+      // Covers `export default function Name` too — the name is a live local
+      // binding regardless of the default modifier.
+      if (stmt.name) names.add(stmt.name.text);
+    } else if (
+      (ts.isInterfaceDeclaration(stmt) ||
+        ts.isTypeAliasDeclaration(stmt) ||
+        ts.isEnumDeclaration(stmt)) &&
+      exported(stmt)
+    ) {
+      names.add(stmt.name.text);
+    } else if (
+      ts.isExportDeclaration(stmt) &&
+      !stmt.moduleSpecifier && // WITH a specifier = re-export = allowed
+      stmt.exportClause &&
+      ts.isNamedExports(stmt.exportClause)
+    ) {
+      // `export { local }` / `export { local as Public }` — the name that
+      // crosses the boundary is the EXPORTED one (el.name).
+      for (const el of stmt.exportClause.elements) names.add(el.name.text);
     }
   }
   return names;

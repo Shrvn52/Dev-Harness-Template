@@ -97,11 +97,12 @@ scripts exactly — the docs-audit skill checks for drift.
 Resolved in one place: `backend/src/config.ts` (fail-loud on an invalid `PORT`).
 Mirror this table in `.env.example`.
 
-| Var       | Default     | Purpose                                                                                                                        |
-| --------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `PORT`    | `8137`      | Backend HTTP port. Boot crashes on a non-integer / out-of-range value.                                                         |
-| `HOST`    | `127.0.0.1` | Bind address.                                                                                                                  |
-| `DB_PATH` | `:memory:`  | SQLite location. In-memory by default (no file artifact); point at a file to persist. Tests inject their own DB via `setDb()`. |
+| Var         | Default     | Purpose                                                                                                                                                                                                                                                                                                                                |
+| ----------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PORT`      | `8137`      | Backend HTTP port. Boot crashes on a non-integer / out-of-range value.                                                                                                                                                                                                                                                                 |
+| `HOST`      | `127.0.0.1` | Bind address.                                                                                                                                                                                                                                                                                                                          |
+| `DB_PATH`   | `:memory:`  | SQLite location. In-memory by default (no file artifact); point at a file to persist. Tests inject their own DB via `setDb()`. **Caveat:** under `npm run dev` (tsx watch), every file save restarts the process and **wipes the in-memory DB** — deliberate, see `docs/SETUP.md`; use `DB_PATH=./dev.db` for save-surviving dev data. |
+| `LOG_LEVEL` | `info`      | Minimum level `lib/logger.ts` emits (`debug`\|`info`\|`warn`\|`error`). Boot crashes on any other value.                                                                                                                                                                                                                               |
 
 ## Key Design Decisions
 
@@ -111,7 +112,11 @@ Canonical format — **SSOT file · the invariant · the failure mode if violate
   `lib/route-error-handler.ts`. Invariant: services/routes throw `AppError` subclasses;
   the handler maps them to `{ error }` + status. Failure mode: a plain `throw new Error()`
   reaches `onError` as a 500 and bypasses status mapping. **DON'T** hand-roll
-  `try/catch → c.json` in handlers — throw a typed error. (Enforced: `no-restricted-syntax`.)
+  `try/catch → c.json` in handlers — throw a typed error. (Enforced, precisely: a
+  `no-restricted-syntax` selector bans throwing any **built-in** error constructor by
+  name (`Error`, `TypeError`, …), and the type-aware `only-throw-error` bans throwing
+  non-`Error` values. Known blind spot: aliasing a constructor (`const E = Error`)
+  defeats both — the gate catches accidents, not deliberate evasion.)
 - **Mutation input is validated by Zod, never hand-parsed.** SSOT: `backend/src/schemas/`
   - `lib/zod-hook.ts`. Invariant: routes use `zValidator('json', schema, zodErrorHook)` +
     `c.req.valid('json')`. Failure mode: hand-rolled `await c.req.json()` drifts (different
@@ -123,11 +128,13 @@ Canonical format — **SSOT file · the invariant · the failure mode if violate
 - **SQL-row types are snake_case; DTOs are camelCase.** SSOT: `shared/types.ts`
   (`ItemRow` vs `Item`). Invariant: row types mirror columns; API types are assembled in
   TS. **DON'T** "fix" `created_at` to `createdAt` on a row type — the split is intentional.
-- **Debt only shrinks.** SSOT: `tests/arch/ratchet-allowlist.test.ts`. Invariant: the set
-  of first-party source files (`backend/src`, `frontend/src`, `shared`, `tests` helpers)
-  carrying an `eslint-disable` equals the allowlist; it may shrink (clean a file)
-  but never grow (silence a new disable). **DON'T** append to the allowlist to quiet lint —
-  fix the issue, or document a genuine exception inline with a rationale.
+- **Debt only shrinks.** SSOT: `tests/arch/ratchet-allowlist.test.ts`. Invariant: every
+  first-party source file (`backend/src`, `frontend/src`, `shared`, `tests` helpers)
+  carrying `eslint-disable` directives appears in the allowlist with its **exact
+  occurrence count**; counts may shrink (clean a disable) but never grow — an
+  allowlisted file is not a blank cheque for more disables. **DON'T** append an entry or
+  raise a count to quiet lint — fix the issue, or document a genuine exception inline
+  with a rationale.
 
 ## Conventions
 
@@ -139,7 +146,7 @@ Three tiers. Drift in tier 1 is a CI failure, not a review nit.
 | --------------------------------------------------------------- | ------------------------------------------------ |
 | No `throw new Error()` in `backend/src` (use typed errors)      | `eslint.config.mjs` — `no-restricted-syntax`     |
 | Node built-ins use the `node:` prefix                           | `eslint.config.mjs` — `no-restricted-imports`    |
-| No `console.*` in `backend/src` (except the boot path)          | `eslint.config.mjs` — `no-console`               |
+| No `console.*` in `backend/src` — use `lib/logger.ts`           | `eslint.config.mjs` — `no-console`               |
 | No re-declaring a `shared/` export                              | `tests/arch/no-duplicate-shared-exports.test.ts` |
 | Every registry route has a backing router + unique `/api/` path | `tests/arch/registry-coverage.test.ts`           |
 | `eslint-disable` count only shrinks                             | `tests/arch/ratchet-allowlist.test.ts`           |

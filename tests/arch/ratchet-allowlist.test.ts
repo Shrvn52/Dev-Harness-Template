@@ -1,9 +1,10 @@
 /**
- * Architecture: a SHRINK-ONLY debt ratchet. The set of first-party source files
- * (backend/src, frontend/src, shared, tests helpers) carrying an
- * `eslint-disable` directive must equal the ALLOWLIST below — it may
- * only shrink (clean a file → remove its entry), never grow (silence a new
- * disable → append). The three-way drift check enforces every failure mode.
+ * Architecture: a SHRINK-ONLY debt ratchet, counted PER OCCURRENCE. Every
+ * first-party source file (backend/src, frontend/src, shared, tests helpers)
+ * carrying `eslint-disable` directives must appear in the ALLOWLIST below with
+ * its exact occurrence count. Counts may only shrink (clean a disable → lower
+ * the count / drop the entry), never grow — a per-FILE allowlist would let an
+ * allowlisted file accumulate unlimited new disables undetected.
  *
  * This is the single most valuable archetype for retrofitting onto an existing
  * codebase: point it at any existing debt marker (`any`, `@ts-expect-error`,
@@ -18,11 +19,14 @@ import { walkTs } from './_helpers/walk-ts.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, '..', '..');
-const MARKER = 'eslint-disable';
+const MARKER = /eslint-disable/g;
 
-// Files permitted to carry an eslint-disable. Shrink only — never append to
-// silence a new violation. Each entry should be a DOCUMENTED exception.
-const ALLOWLIST = ['backend/src/lib/route-error-handler.ts'];
+// Files permitted to carry eslint-disable directives, with their EXACT count.
+// Shrink only — never raise a count or append an entry to silence a new
+// violation. Each entry should be a DOCUMENTED exception.
+const ALLOWLIST: ReadonlyArray<{ file: string; count: number }> = [
+  { file: 'backend/src/lib/route-error-handler.ts', count: 1 },
+];
 
 function rel(f: string): string {
   return relative(REPO_ROOT, f).split('\\').join('/');
@@ -33,28 +37,44 @@ function rel(f: string): string {
 // test plumbing is debt like any other.
 const SCAN_ROOTS = ['backend/src', 'frontend/src', 'shared', 'tests'];
 
-describe('Architecture — eslint-disable ratchet (shrink-only)', () => {
-  const withMarker = SCAN_ROOTS.flatMap((root) => walkTs(join(REPO_ROOT, ...root.split('/'))))
-    .filter((f) => readFileSync(f, 'utf8').includes(MARKER))
-    .map(rel);
+describe('Architecture — eslint-disable ratchet (shrink-only, per-occurrence)', () => {
+  // file → actual occurrence count, for every file containing the marker.
+  const actual = new Map<string, number>(
+    SCAN_ROOTS.flatMap((root) => walkTs(join(REPO_ROOT, ...root.split('/'))))
+      .map((f) => [rel(f), (readFileSync(f, 'utf8').match(MARKER) ?? []).length] as const)
+      .filter(([, n]) => n > 0),
+  );
+  const allowed = new Map(ALLOWLIST.map((e) => [e.file, e.count]));
 
   it('the allowlist is non-empty (sanity floor — the 3-way check runs against real data)', () => {
     expect(ALLOWLIST.length).toBeGreaterThan(0);
   });
 
   it('no NEW debt: every file with an eslint-disable is on the allowlist', () => {
-    const newDebt = withMarker.filter((f) => !ALLOWLIST.includes(f));
+    const newDebt = [...actual.keys()].filter((f) => !allowed.has(f));
     expect(
       newDebt,
-      `New eslint-disable outside the allowlist. Fix the lint issue — or, if genuinely justified, add the file to ALLOWLIST with a rationale comment:\n  ${newDebt.join('\n  ')}`,
+      `New eslint-disable outside the allowlist. Fix the lint issue — or, if genuinely justified, add { file, count } to ALLOWLIST with a rationale comment:\n  ${newDebt.join('\n  ')}`,
     ).toEqual([]);
   });
 
-  it('no GHOST entries: every allowlisted file still contains an eslint-disable', () => {
-    const ghosts = ALLOWLIST.filter((f) => !withMarker.includes(f));
+  it('no GROWTH: no allowlisted file exceeds its allowed count', () => {
+    const grown = [...actual.entries()]
+      .filter(([f, n]) => allowed.has(f) && n > (allowed.get(f) ?? 0))
+      .map(([f, n]) => `${f}: ${n} found, ${allowed.get(f)} allowed`);
+    expect(
+      grown,
+      `An allowlisted file gained NEW eslint-disable directives — the per-file allowance is not a blank cheque. Fix the new lint issue instead of stacking disables:\n  ${grown.join('\n  ')}`,
+    ).toEqual([]);
+  });
+
+  it('no GHOST allowance: every allowlisted count is still fully used (shrink the list as you clean)', () => {
+    const ghosts = ALLOWLIST.filter((e) => (actual.get(e.file) ?? 0) < e.count).map(
+      (e) => `${e.file}: ${actual.get(e.file) ?? 0} found, ${e.count} allowed`,
+    );
     expect(
       ghosts,
-      `Allowlist entries no longer contain an eslint-disable — the ratchet only shrinks, so REMOVE them:\n  ${ghosts.join('\n  ')}`,
+      `Allowlist counts exceed reality — the ratchet only shrinks, so lower these counts (or drop the entries) to bank the improvement:\n  ${ghosts.join('\n  ')}`,
     ).toEqual([]);
   });
 });

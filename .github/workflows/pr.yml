@@ -21,7 +21,10 @@ jobs:
   # ────────────────────────────────────────────────────────────────
   # Path filter — decides which downstream lanes run. Cheap lanes gate
   # every PR; expensive lanes (e2e) fire only when their code changes.
-  # Edit .github/workflows/** → the lint + backend lanes re-validate.
+  # Edit .github/workflows/** → EVERY lane re-validates: a workflow edit
+  # changes how a lane runs, so the lane it changes must run to prove
+  # itself (the cost — an occasional extra e2e run — is the price of
+  # never merging an untested lane definition).
   # Use the Run workflow button (workflow_dispatch) to force a full run.
   # ────────────────────────────────────────────────────────────────
   changes:
@@ -68,6 +71,7 @@ jobs:
               - 'shared/**'
               - 'package.json'
               - 'package-lock.json'
+              - '.github/workflows/**'
             e2e:
               - 'backend/**'
               - 'frontend/**'
@@ -80,6 +84,7 @@ jobs:
               - 'package*.json'
               - 'backend/package.json'
               - 'frontend/package.json'
+              - '.github/workflows/**'
 
   # ── Lint — eslint flat config across backend/src, shared, tests, frontend/src.
   lint:
@@ -220,3 +225,32 @@ jobs:
           echo "${GITLEAKS_SHA256}  /tmp/gitleaks.tar.gz" | sha256sum -c -
           tar -xz -C /tmp -f /tmp/gitleaks.tar.gz gitleaks
           /tmp/gitleaks detect --source . --log-opts=--all --redact -v --exit-code 1
+
+  # ────────────────────────────────────────────────────────────────
+  # Fan-in — THE single required status check. Path-filtered lanes
+  # skip on irrelevant PRs, which breaks branch protection both ways:
+  # mark the lanes themselves required and a docs-only PR can never
+  # merge (its skipped checks never report); leave them optional and
+  # a code PR whose lane failed can merge anyway. This job always
+  # runs, fails if any lane failed or was cancelled, and treats
+  # skipped as success. Protect the branch with exactly this one
+  # check — "results" — and none of the individual lanes.
+  # ────────────────────────────────────────────────────────────────
+  results:
+    if: always()
+    needs: [changes, lint, typecheck, backend, frontend, e2e, lockfile-drift, secret-scan]
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Fail on any failed or cancelled lane
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          echo "$RESULTS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          bad=$(echo "$RESULTS" | jq -r \
+            'to_entries[] | select(.value.result == "failure" or .value.result == "cancelled") | .key')
+          if [ -n "$bad" ]; then
+            echo "::error::Failed or cancelled lanes: $(echo "$bad" | tr '\n' ' ')"
+            exit 1
+          fi
+          echo "All lanes passed or were legitimately skipped."

@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
 import { readFileSync, readdirSync } from 'node:fs';
 import { ROUTES } from '../../backend/src/routes/registry.js';
+import { stripComments } from './_helpers/strip-comments.js';
 
 describe('Architecture — route registry coverage', () => {
   it('the registry is non-empty (sanity floor — no vacuous pass)', () => {
@@ -42,13 +43,9 @@ describe('Architecture — route registry coverage', () => {
     // cwd-relative readdir would read the wrong dir; resolve from this file.
     const here = dirname(fileURLToPath(import.meta.url)); // tests/arch/
     const routesDir = resolve(here, '..', '..', 'backend/src/routes');
-    // Strip // and /* */ comments before matching — a commented-out import must
-    // count as UNregistered, not sneak past the regex below. (Crude lexing is
-    // fine here: registry.ts holds no string literals containing comment tokens,
-    // and the import specifiers we match live outside comments by definition.)
-    const src = readFileSync(join(routesDir, 'registry.ts'), 'utf8')
-      .replace(/\/\*[\s\S]*?\*\//g, '')
-      .replace(/\/\/.*$/gm, '');
+    // Strip comments before matching — a commented-out import must count as
+    // UNregistered, not sneak past the regex below (see the helper's caveats).
+    const src = stripComments(readFileSync(join(routesDir, 'registry.ts'), 'utf8'));
     const files = readdirSync(routesDir).filter((f) => f.endsWith('.ts') && f !== 'registry.ts');
     expect(files.length).toBeGreaterThan(0); // sanity floor — no vacuous pass
     const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

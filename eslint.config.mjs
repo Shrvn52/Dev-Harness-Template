@@ -69,14 +69,27 @@ const T1_BACKEND_RULES = {
   'no-restricted-syntax': [
     'error',
     {
-      selector: "ThrowStatement > NewExpression[callee.name='Error']",
+      // Any BUILT-IN error constructor, not just `Error` — `throw new TypeError()`
+      // bypasses status mapping exactly the same way.
+      selector:
+        'ThrowStatement > NewExpression[callee.name=/^(Error|TypeError|RangeError|SyntaxError|EvalError|ReferenceError|URIError|AggregateError)$/]',
       message:
-        "Use a typed error from 'lib/errors.ts' (BadRequestError | NotFoundError | ConflictError | ValidationError | ServiceUnavailableError | AppError). They map to the right HTTP status via routeErrorHandler — plain `new Error()` reaches onError as a 500 and bypasses the mapping.",
+        "Use a typed error from 'lib/errors.ts' (BadRequestError | NotFoundError | ConflictError | ValidationError | ServiceUnavailableError | AppError). They map to the right HTTP status via routeErrorHandler — a built-in error reaches onError as a 500 and bypasses the mapping.",
     },
   ],
-  // Structured logging only in services/routes. `console.*` is reserved for the
-  // boot path (index.ts, config.ts — whitelisted below) and the unknown-error
-  // fallback in route-error-handler.ts (inline-disabled there with rationale).
+  // Type-aware backstop for the selector above: throwing any non-Error value
+  // (`throw { error: 'x' }`, `throw 'string'`) is banned outright. Together the
+  // two rules guarantee: every throw is an Error instance, and no throw names a
+  // built-in error constructor directly. KNOWN blind spot (documented in
+  // CLAUDE.md): aliasing (`const E = Error; throw new E()`) defeats the selector
+  // and satisfies the type check — the gate targets accidents, not evasion;
+  // deliberate aliasing is review's job.
+  '@typescript-eslint/only-throw-error': 'error',
+  // Structured logging only in services/routes — the sanctioned path is
+  // `lib/logger.ts` (leveled JSON lines; see its header). `console.*` is
+  // reserved for the boot path (index.ts, config.ts — whitelisted below) and
+  // the unknown-error fallback in route-error-handler.ts (inline-disabled
+  // there with rationale).
   'no-console': 'error',
 };
 
@@ -92,10 +105,16 @@ export default [
     ],
   },
 
-  // Backend — common rules + the worked framework selector.
+  // Backend — common rules + the worked framework selector. Type-AWARE linting
+  // (projectService) is scoped to this block only: `only-throw-error` needs type
+  // info, and backend/src is small enough that the tsc pass is cheap. Don't
+  // spread projectService to the other blocks without measuring lint time.
   {
     files: ['backend/src/**/*.ts'],
-    languageOptions: { parser: tsparser },
+    languageOptions: {
+      parser: tsparser,
+      parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
+    },
     plugins: { '@typescript-eslint': tseslint },
     rules: { ...COMMON_TS_RULES, ...T1_BACKEND_RULES },
   },
