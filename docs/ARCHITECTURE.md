@@ -12,15 +12,15 @@ from the build output or trip over while wiring up a new module.
 dev-harness-template/
 ├── package.json            # workspace root (backend, frontend) + the one lockfile
 ├── tsconfig.base.json      # the one compiler baseline both packages extend
-├── tsconfig.json           # root type-check (resolves @shared/* against ./shared)
-├── tools/dev.mjs           # zero-dep dual dev-server launcher
+├── tools/                  # zero-dep launchers: dev.mjs (dual dev servers), smoke.mjs
+├── Dockerfile              # the minimal ship path (build + prod-deps runtime stages)
 ├── backend/                # Hono + better-sqlite3 + Zod  (own package.json)
 │   ├── src/
-│   │   ├── index.ts        # buildApp() + startServer()
-│   │   ├── config.ts       # env resolution (PORT/HOST/DB_PATH)
+│   │   ├── index.ts        # buildApp() + startServer() (+ static serving of frontend/dist)
+│   │   ├── config.ts       # env resolution (PORT/HOST/DB_PATH/LOG_LEVEL)
 │   │   ├── db.ts           # getDb/setDb/closeDb
 │   │   ├── schema.ts       # runMigrations()
-│   │   ├── lib/            # errors, route-error-handler, hono-app, zod-hook, exec
+│   │   ├── lib/            # errors, route-error-handler, hono-app, zod-hook, logger
 │   │   ├── routes/         # health.ts, items.ts, registry.ts (SSOT)
 │   │   └── schemas/        # zod input schemas
 │   └── tsconfig.json
@@ -29,10 +29,10 @@ dev-harness-template/
 │   │   ├── main.tsx        # QueryClientProvider root
 │   │   ├── App.tsx         # the example surface — delete it
 │   │   └── api.ts          # data layer (the offline seam — see below)
-│   ├── vite.config.ts      # @shared + @ aliases (place 1 of 3)
-│   ├── vitest.config.ts    # @shared + @ aliases (place 2 of 3)
-│   └── tsconfig.json       # @shared + @ paths (place 3 of 3)
-├── shared/                 # cross-boundary types + constants (NO build step)
+│   ├── vite.config.ts      # dev/preview servers + the PORT-aware /api proxy
+│   ├── vitest.config.ts    # the jsdom test tier
+│   └── tsconfig.json
+├── shared/                 # cross-boundary types (NO build step, imported relatively)
 ├── tests/                  # unit/ · integration/ · arch/
 └── e2e/                    # Playwright — example-api.spec.ts + ui/example.spec.ts
 ```
@@ -77,7 +77,7 @@ dep tree stays `npm audit`-clean on a fresh clone.
 
 ## The shared boundary
 
-`shared/` holds the only types and constants that cross the front/back wire. It has
+`shared/` holds the only types that cross the front/back wire. It has
 **no build step** — both packages compile it from source as part of their own `tsc`
 pass (the backend `include`s `../shared/**/*`; the frontend `include`s `../shared`).
 
@@ -85,7 +85,7 @@ Two enforced rules make the boundary load-bearing rather than aspirational:
 
 1. **One source per name.** `tests/arch/no-duplicate-shared-exports.test.ts` fails
    if any name exported from `shared/` is _re-declared_ in `backend/src/` or
-   `frontend/src/`. Re-exports (`export { X } from '@shared/...'`) are fine — only
+   `frontend/src/`. Re-exports (`export { X } from '../../shared/...'`) are fine — only
    a second fresh declaration of the same identifier is a violation. This is the
    tripwire that stops a `STATUS_COLORS` in `shared/` and a second one in
    `frontend/` from drifting silently.
@@ -95,40 +95,37 @@ Two enforced rules make the boundary load-bearing rather than aspirational:
    `camelCase` (`Item.createdAt`). `rowToItem()` is the mapping seam between them.
    The split is intentional — do not "fix" the snake_case rows.
 
-### The relative-vs-`@shared` import split (and _why_)
+### Relative imports on BOTH sides (and _why_ there is no alias)
 
-The same `shared/` file is imported two different ways depending on which side
-imports it:
+The same `shared/` file is imported relatively from both packages — only the
+extension differs:
 
 ```ts
-// frontend/src/api.ts        — alias form
-import type { Item } from '@shared/types';
+// frontend/src/api.ts        — bundler resolution, extensionless
+import type { Item } from '../../shared/types';
 
-// backend/src/routes/items.ts — relative form
+// backend/src/routes/items.ts — NodeNext ESM, needs the emitted .js name
 import { rowToItem, type ItemRow } from '../../../shared/types.js';
 ```
 
-This asymmetry is not an oversight. It falls out of how each package emits:
+Why the backend can't use an alias at all: **`tsc` does not rewrite path aliases
+in emitted JS.** If backend code imported `@shared/types`, the emitted
+`dist/.../items.js` would still say `@shared/types`, and Node at runtime has no
+idea what that means (no bundler, no path-mapping loader). Relative paths with the
+`.js` extension survive emit verbatim and resolve under Node's ESM resolver — the
+`.js` (not `.ts`) on a TypeScript import is the _output_ filename.
 
-- **The backend compiles to JavaScript** (`tsc` → `backend/dist/`). TypeScript's
-  path aliases are a _type-checking_ convenience — **`tsc` does not rewrite them in
-  the emitted JS.** If backend code imported `@shared/types`, the emitted
-  `dist/.../items.js` would still say `@shared/types`, and Node at runtime has no
-  idea what that means (no bundler, no path-mapping loader). So the backend uses
-  **real relative paths with the `.js` extension** that survive emit verbatim and
-  resolve at runtime under Node's ESM resolver. That `.js` (not `.ts`) on a
-  TypeScript import is required by `moduleResolution: "bundler"`/NodeNext-style
-  ESM — it's the _output_ filename.
-
-- **The frontend never emits the shared file to disk.** Vite bundles everything,
-  and its bundler _does_ honor the `@shared` alias (declared in `vite.config.ts`).
-  Its `tsc` pass is `noEmit: true` — purely a type-check — so there's no runtime
-  artifact for an unrewritten alias to break. The alias form is cleaner and works
-  in every frontend context **as long as it's declared in all three resolvers**
-  (below).
-
-So: **backend = relative `.js` imports** (must survive `tsc` emit and run under raw
-Node), **frontend = `@shared` alias** (Vite rewrites it; `tsc` only checks it).
+Why the frontend doesn't use one either, even though Vite could: an alias must be
+declared in **every resolver that ever touches the import** — Vite, Vitest, and
+the type-checker each resolve modules independently, and each declaration is a
+place to drift (miss one and imports work in some contexts while silently breaking
+in others). A previous iteration of this template carried exactly that lockstep
+burden across multiple config files. Relative paths resolve identically in every
+tool for free, so the template's rule is simply: **`shared/` is imported
+relatively, everywhere.** If you later adopt an alias anyway (deep frontend trees
+make `../../..` chains ugly), know what you're buying: declare it in every
+resolver and treat a missing declaration as the first suspect when an import
+breaks in only one context.
 
 ### Where the backend build lands — `dist/backend/src` + `dist/shared`
 
@@ -150,24 +147,6 @@ that the source uses lands exactly on `dist/shared/types.js` after emit, so the 
 import string is correct in both source and build. This is the mechanical reason the
 backend can't use the alias: the relative path is the only form that is simultaneously
 valid pre-build (source tree) and post-build (`dist/` tree).
-
-### The "declare the alias in three places" gotcha
-
-`@shared/*` (and `@/*`) must be declared in **three** resolvers on the frontend, or
-imports work in some contexts and silently break in others:
-
-| Resolver   | File                                               | Resolves modules for…             |
-| ---------- | -------------------------------------------------- | --------------------------------- |
-| Vite       | `frontend/vite.config.ts` (`resolve.alias`)        | dev server + production bundle    |
-| Vitest     | `frontend/vitest.config.ts` (`resolve.alias`)      | the jsdom test runner             |
-| TypeScript | `frontend/tsconfig.json` (`compilerOptions.paths`) | the type-checker (editor + `tsc`) |
-
-Miss the Vite entry → runtime/bundle breaks but types pass. Miss the Vitest entry →
-tests fail to resolve while dev works. Miss the tsconfig entry → editor red squiggles
-and `tsc` errors while everything _runs_ fine. The three are kept in lockstep on
-purpose; both config files carry a comment to that effect. (The backend's Vitest
-config declares only `@shared` for its own test imports — it has no `@` because the
-backend doesn't use one.)
 
 ---
 
@@ -241,17 +220,8 @@ const server = serve({ fetch: app.fetch, port: 0, hostname: '127.0.0.1' });
 This drives the real Hono app, the real router registry, the real zod validators,
 and the real error handler — over real HTTP — against a throwaway in-memory DB. It
 catches route/schema/wiring bugs the unit tier can't. (What it _misses_ — real
-subprocess, real DB-file migrations, real external APIs — is documented in
+DB-file migrations, real external APIs, real subprocesses — is documented in
 `TESTING.md`; that honesty is the asset.)
-
-### The subprocess seam
-
-`backend/src/lib/exec.ts` exports a single `execFileAsync = promisify(execFile)`.
-Everything that shells out goes through it. `tests/integration/_helpers/mock-exec.ts`
-stubs `node:child_process` (re-declaring the `util.promisify.custom` symbol so the
-promisified form still resolves `{ stdout, stderr }`), and the wrapper inherits the
-stub transparently — subprocess-touching code becomes testable without real binaries,
-and every call is recorded for assertion.
 
 ---
 
@@ -358,6 +328,27 @@ shape as the route registry:
 The seam is already in the right place: `runMigrations` is the single entry both `db.ts`
 and the test harness call, so swapping its body for a registry walk requires no caller
 changes.
+
+---
+
+## The ship path — deliberately minimal
+
+`npm run build && npm start` produces a real deployable: `startServer()` mounts
+`frontend/dist` behind the API routes when a build exists (`findFrontendDist()`
+walks up from the module, so it works from both the source tree and the emitted
+`dist/` tree). The SPA fallback serves `index.html` for unknown non-`/api` GETs;
+`/api/*` keeps the JSON `{ error }` 404 contract. No build present → API-only mode,
+announced at boot.
+
+The `Dockerfile` is the whole deploy story: a build stage (full workspace install +
+`npm run build`) and a runtime stage (prod deps + the two `dist/` trees,
+`HOST=0.0.0.0`, `DB_PATH=/data/app.db` behind a volume). Static serving lives in
+`startServer()`, NOT `buildApp()` — the factory stays pure for the integration tier.
+
+**What is intentionally absent** (day-2 decisions the template must not make for
+you): TLS/reverse proxy, auth, CORS (same-origin by construction — one port),
+horizontal scaling (SQLite is single-writer), error reporting, and DB migrations
+beyond `runMigrations()`. See `START_HERE.md` → "What this template will NOT do".
 
 ---
 

@@ -1,16 +1,10 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
-import { fileURLToPath, URL } from 'node:url';
 
-// Frontend tier: jsdom. Same @shared alias as vite.config.ts (see the gotcha note there).
+// Frontend tier: jsdom. shared/ is imported relatively, so no alias config here
+// (see the note in vite.config.ts).
 export default defineConfig({
   plugins: [react()],
-  resolve: {
-    alias: {
-      '@shared': fileURLToPath(new URL('../shared', import.meta.url)),
-      '@': fileURLToPath(new URL('./src', import.meta.url)),
-    },
-  },
   test: {
     globals: true,
     environment: 'jsdom',

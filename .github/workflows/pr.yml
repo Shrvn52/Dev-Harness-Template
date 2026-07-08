@@ -11,9 +11,8 @@ concurrency:
 
 permissions:
   contents: read
-  # pull-requests: read is required on `pull_request` events by the API calls that
-  # dorny/paths-filter (listFiles, in the `changes` job) and gitleaks-action
-  # (GET /pulls/:n/commits, in `secret-scan`) make — without it both 403 with
+  # pull-requests: read is required on `pull_request` events by dorny/paths-filter
+  # (its listFiles call in the `changes` job) — without it the job 403s with
   # "Resource not accessible by integration". Read-only; no write scope needed.
   pull-requests: read
 
@@ -37,7 +36,10 @@ jobs:
       e2e: ${{ steps.filter.outputs.e2e }}
     steps:
       - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
+      # sha-pinned like the gitleaks binary below, and for a stronger reason: this
+      # action decides WHICH gates run at all — a compromised tag could skip every
+      # lane. Pin is v3.0.2; refresh via docs/SETUP.md → "Keeping the template fresh".
+      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
         id: filter
         with:
           filters: |
@@ -46,9 +48,12 @@ jobs:
               - 'frontend/src/**/*.{ts,tsx}'
               - 'shared/**/*.ts'
               - 'tests/**/*.ts'
+              # e2e + tooling are inside the lint/typecheck perimeter too — first-party
+              # source is first-party source.
+              - 'e2e/**/*.ts'
+              - 'playwright.config.ts'
+              - 'tools/**'
               - 'eslint.config.mjs'
-              - '.prettierrc'
-              - '.prettierignore'
               # The typecheck lane keys off this filter — a PR that loosens a
               # tsconfig (strict, paths, includes) must not be able to skip it.
               - 'tsconfig*.json'
@@ -56,21 +61,29 @@ jobs:
               - 'frontend/tsconfig*.json'
               - 'package.json'
               - 'package-lock.json'
+              - '.nvmrc'
               - '.github/workflows/**'
             backend:
               - 'backend/**'
+              # The arch tests run in THIS lane and scan frontend/src too (ratchet,
+              # duplicate-shared-exports, forbidden-token, setdb-seam) — a
+              # frontend-only PR must not be able to skip them.
+              - 'frontend/**'
               - 'shared/**'
               - 'tests/**'
               - 'tools/**'
+              - 'e2e/**'
               - 'tsconfig*.json'
               - 'package.json'
               - 'package-lock.json'
+              - '.nvmrc'
               - '.github/workflows/**'
             frontend:
               - 'frontend/**'
               - 'shared/**'
               - 'package.json'
               - 'package-lock.json'
+              - '.nvmrc'
               - '.github/workflows/**'
             e2e:
               - 'backend/**'
@@ -84,6 +97,7 @@ jobs:
               - 'package*.json'
               - 'backend/package.json'
               - 'frontend/package.json'
+              - '.nvmrc'
               - '.github/workflows/**'
 
   # ── Lint — eslint flat config across backend/src, shared, tests, frontend/src.
@@ -100,8 +114,23 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npm run lint
-      # prettier is enforced, not aspirational — a formatting config that nothing
-      # checks would drift into a lie (this repo's tier-1 rule applied to itself).
+
+  # ── Format — prettier gates EVERY PR, unfiltered. `prettier --check .` covers
+  #    *.md, *.yml, .claude/**, e2e/**, tools/** — the file classes a template's
+  #    adopters edit most. Path-filtering this lane once let a docs-only PR land
+  #    unformatted and break main for the next TS PR; the check costs seconds, so
+  #    it simply always runs. (prettier is enforced, not aspirational — a
+  #    formatting config that nothing checks would drift into a lie.)
+  format:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+      - run: npm ci
       - run: npm run format:check
 
   # ── Typecheck — the tests-inclusive type gate. Vitest (esbuild) strips types
@@ -238,7 +267,7 @@ jobs:
   # ────────────────────────────────────────────────────────────────
   results:
     if: always()
-    needs: [changes, lint, typecheck, backend, frontend, e2e, lockfile-drift, secret-scan]
+    needs: [changes, lint, format, typecheck, backend, frontend, e2e, lockfile-drift, secret-scan]
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:

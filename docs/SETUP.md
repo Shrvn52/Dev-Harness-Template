@@ -96,7 +96,7 @@ DB_PATH=./dev.db npm run dev:backend
 
 ## Run the tests
 
-Four tiers, fastest first. Each is independently runnable.
+Fastest first; each independently runnable (`npm run gate` chains them all + the checks).
 
 ```bash
 npm test                  # unit + integration + arch (backend) THEN frontend (jsdom)
@@ -109,11 +109,12 @@ What each tier is:
 
 - **Unit** (`tests/unit/`) — pure functions, no I/O. The fastest, most numerous tier.
 - **Integration** (`tests/integration/`) — drives the **real** Hono app via
-  `buildApp()` with an in-memory DB injected through `setDb()`, over real HTTP. Mocks
-  the subprocess layer via `mock-exec.ts`. Catches route/schema/wiring bugs.
-- **Arch** (`tests/arch/`) — four guardrail archetypes (route-registry coverage,
-  no-duplicate-shared-exports, forbidden-token allowlist, shrink-only eslint-disable
-  ratchet). These are structural invariants, not behavior.
+  `buildApp()` with an in-memory DB injected through `setDb()`, over real HTTP.
+  Catches route/schema/wiring bugs.
+- **Arch** (`tests/arch/`) — the guardrail archetypes (registry coverage, duplicate
+  shared exports, the debt ratchet, forbidden tokens, route conventions, env-var
+  mirrors, the setDb fence — the directory is the inventory). Structural
+  invariants, not behavior.
 - **Frontend** (`frontend/src/**/*.test.tsx`) — jsdom, Testing Library, renders the
   real `App` through real providers.
 
@@ -139,32 +140,48 @@ served by `vite preview` — `npm run test:ui` sets the flag for you, but you mu
 ## First real step: delete the example, pour your own in
 
 The `items` domain exists only to prove the wiring is green end-to-end. Replacing it
-is the intended first move. The example threads through these files — rename or rip
-out each in turn, and the tests/lint/build will tell you when you've missed one:
+is the intended first move, and it is a GUIDED one: run **`/start`** in Claude Code
+(`.claude/commands/start.md`) and the agent walks the whole swap — verify green,
+collect your domain, replace each layer in dependency order, finish with the same
+gate CI runs. `START_HERE.md` at the repo root is the human-readable version of the
+same path.
 
-| Layer               | File(s)                                                                                                | What to do                                                                                                                           |
-| ------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
-| Shared types        | `shared/types.ts`                                                                                      | Replace `ItemRow` / `Item` / `rowToItem` with your row + DTO + mapper. Keep the snake_case-row / camelCase-DTO split.                |
-| Shared constants    | `shared/constants.ts`                                                                                  | Swap `ITEM_SORT_FIELDS` etc. for yours (keep the const-array-derived-union pattern).                                                 |
-| Schema              | `backend/src/schema.ts`                                                                                | Change the `CREATE TABLE` in `runMigrations`. Grow it into a migration registry when needed (see `docs/ARCHITECTURE.md` → "Schema"). |
-| Input schemas       | `backend/src/schemas/example.ts`                                                                       | Replace `createItemSchema` with your zod schema(s).                                                                                  |
-| Routes              | `backend/src/routes/items.ts`                                                                          | Write your handlers with `createRouter()` + `zValidator`.                                                                            |
-| Route registry      | `backend/src/routes/registry.ts`                                                                       | Update `ROUTES` — the SSOT the arch test enforces.                                                                                   |
-| Frontend data layer | `frontend/src/api.ts`                                                                                  | Replace the `fetch` wrappers (this is also the offline seam).                                                                        |
-| Frontend UI         | `frontend/src/App.tsx`                                                                                 | Replace the example surface.                                                                                                         |
-| Tests               | `tests/unit/example.test.ts`, `tests/integration/items.test.ts`, `frontend/src/App.test.tsx`, `e2e/**` | Rewrite against your domain.                                                                                                         |
-
-After replacing, run the full gate to confirm you're green again:
+The example threads through, in dependency order: `shared/types.ts` →
+`backend/src/schema.ts` → `backend/src/schemas/example.ts` →
+`backend/src/routes/items.ts` → `backend/src/routes/registry.ts` →
+`frontend/src/api.ts` → `frontend/src/App.tsx` → the tests that assert it
+(`tests/unit/example.test.ts`, `tests/integration/items.test.ts`,
+`frontend/src/App.test.tsx`, `e2e/**`). Grep for `item` when you think you're done —
+the gate will tell you about anything you missed:
 
 ```bash
-npm run lint && npm run build && npm test
+npm run gate    # format:check → lint → typecheck → build → test → dist smoke
 ```
 
-Keep the `lib/`, `config.ts`, `db.ts`, `index.ts`, `tools/dev.mjs`, the arch tests,
-and the three-place alias configs — that's the harness. Everything labeled
-"example" is yours to discard. Swapping a whole _layer_ (the DB, the HTTP framework,
-the frontend) rather than just the domain? That's a different operation — see
-[`SWAPPING.md`](SWAPPING.md).
+`npm run gate` is the SAME script chain CI runs — passing locally means CI-parity
+(the dist smoke is domain-neutral, so it survives the deletion by design).
+
+Keep `lib/`, `config.ts`, `db.ts`, `index.ts`, `tools/`, and the arch tests —
+that's the harness. Everything labeled "example" is yours to discard. Swapping a
+whole _layer_ (the DB, the HTTP framework, the frontend) rather than just the
+domain? That's a different operation — see [`SWAPPING.md`](SWAPPING.md).
+
+---
+
+## Ship it
+
+`npm run build && npm start` is a real deployable: the backend serves the built
+frontend at `/` (SPA fallback included) and the API under `/api/*`, one port, no
+reverse proxy needed to try it. For containers:
+
+```bash
+docker build -t my-app .
+docker run -p 8137:8137 -v appdata:/data my-app   # DB persists in the volume
+```
+
+The `Dockerfile` sets `HOST=0.0.0.0` and `DB_PATH=/data/app.db`. That is the whole
+ship story on purpose — TLS, auth, scaling, and error reporting are day-2 decisions
+the template must not make for you (`START_HERE.md` lists them explicitly).
 
 ---
 
@@ -181,11 +198,12 @@ routine** — run it quarterly-ish, or whenever the scheduled `Audit` workflow g
 2. **Node** — check the current LTS. Bump `.nvmrc` (and CI follows automatically —
    every lane reads `node-version-file: .nvmrc`). The `engines` floor (`>=20`)
    only needs raising when you _adopt_ a feature older Node lacks.
-3. **Pinned binaries** — `.github/workflows/pr.yml` pins a gitleaks version **and
-   its sha256** (from the release's `checksums.txt`). Refresh both together —
-   never bump the version without the matching hash.
-4. **Prove it** — the full gate:
-   `npm ci && npm run lint && npm run format:check && npm run typecheck && npm run build && npm test && npm run test:smoke:dist && npx playwright test`
+3. **Pins** — `.github/workflows/pr.yml` pins TWO things to refresh together with
+   their hashes, never version-only: the gitleaks binary (version + sha256 from the
+   release's `checksums.txt`) and the `dorny/paths-filter` action (commit SHA — it
+   decides which CI lanes run, so verify the SHA against the release tag on its
+   repo before bumping).
+4. **Prove it** — `npm ci && npm run gate && npx playwright test`
 
 The scheduled `Audit` workflow (Mondays, `audit.yml`) is the alarm between routine
 runs — it fails on any high-severity advisory in the lockfile, which is your cue to

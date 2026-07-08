@@ -11,6 +11,7 @@
     "node": ">=20"
   },
   "scripts": {
+    "gate": "npm run format:check && npm run lint && npm run typecheck && npm run build && npm test && npm run test:smoke:dist",
     "dev": "node tools/dev.mjs",
     "dev:backend": "npm run dev -w backend",
     "dev:frontend": "npm run dev -w frontend",
