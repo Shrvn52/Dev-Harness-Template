@@ -10,7 +10,7 @@ from the build output or trip over while wiring up a new module.
 
 ```
 dev-harness-template/
-├── package.json            # root scripts — cd-delegation, NOT npm workspaces
+├── package.json            # workspace root (backend, frontend) + the one lockfile
 ├── tsconfig.base.json      # the one compiler baseline both packages extend
 ├── tsconfig.json           # root type-check (resolves @shared/* against ./shared)
 ├── tools/dev.mjs           # zero-dep dual dev-server launcher
@@ -37,38 +37,41 @@ dev-harness-template/
 └── e2e/                    # Playwright — example-api.spec.ts + ui/example.spec.ts
 ```
 
-### Why cd-delegation, not npm workspaces
+### Why npm workspaces (and what the previous cd-delegation cost)
 
-The root `package.json` is **not** a workspace root. Its scripts shell into each
-package:
+The root `package.json` declares `"workspaces": ["backend", "frontend"]`. One
+`npm ci` at the root installs every tier into one hoisted tree, under one lockfile.
+Root scripts delegate with `-w`:
 
 ```json
-"build": "cd frontend && npm run build && cd ../backend && npm run build",
-"test":  "cd backend && npm test && cd ../frontend && npm test"
+"build": "npm run build -w frontend && npm run build -w backend",
+"test":  "npm test -w backend && npm test -w frontend"
 ```
 
-`backend/` and `frontend/` each carry their own `package.json`, `node_modules`,
-and lockfile. The trade is deliberate:
+The template originally used cd-delegation (three independent npm projects) to keep
+each package's toolchain isolated. That design had a structural flaw the isolation
+never paid for: the cross-cutting `tests/` tier needed `hono`/`zod`/`vitest` types,
+so the root `package.json` **mirrored** the backend's runtime deps — and the two
+declarations drifted (root pinned `hono@4.12.25` while backend declared `^4.12.14`).
+Tests were type-checked against one resolution and _run_ against another, with
+nothing to detect the skew. Workspaces dissolve the whole failure class:
 
-- **Each package owns its toolchain.** The backend pins `tsx`/`vitest`/`better-sqlite3`;
-  the frontend pins `vite`/`@vitejs/plugin-react`/`jsdom`. Neither hoists into a
-  shared root tree, so a frontend dep bump can't silently shift a backend
-  transitive. The root tree holds Playwright, ESLint, **and the test-only type deps the
-  cross-cutting `tests/` tier imports** (`hono`, `@hono/node-server`, `vitest`, `zod`,
-  `@types/better-sqlite3`, `typescript`) — the accepted cost of the tests-inclusive
-  `npm run typecheck` gate (`tsconfig.typecheck.json`), since files under `tests/`
-  resolve bare specifiers from the root `node_modules`. **`hono` is pinned to an exact
-  version matching `backend/`** (not a caret): the root typecheck also checks `backend/src`,
-  whose `hono` resolves from `backend/node_modules`, and a `Context` type flows across the
-  test↔backend boundary — a version skew between the two trees makes the two `Hono` types
-  non-assignable and reds the gate on otherwise-correct code. Keep the pin in sync on a
-  deliberate `hono` bump.
-- **A package is liftable.** Because nothing depends on workspace hoisting, you can
-  copy `backend/` out to its own repo without untangling a hoisted graph.
-- **`npm ci` runs three times** (root, backend, frontend) — the one cost. The
-  `tools/dev.mjs` launcher exists for the same "no shared root deps" reason: it
-  replaces `concurrently` with a zero-dependency `spawn` so the root tree stays
-  `npm audit`-clean on a fresh clone.
+- **One resolution per dep.** `tests/` and `backend/src` resolve `hono` from the
+  same hoisted install — the typecheck gate and the runtime can no longer disagree.
+  The root `package.json` now declares only genuinely-root tooling (ESLint,
+  Playwright, prettier, typescript).
+- **One lockfile.** `lockfile-drift` and `npm audit` each check a single file that
+  carries every tier's resolutions; `npm ci` runs once in every CI lane.
+- **`shared/` is deliberately NOT a workspace.** It has no dependencies and no build
+  step; it needs only its `{"type":"module"}` marker for NodeNext emit (see the
+  shared-boundary section). Making it a workspace would add symlink indirection for
+  zero benefit.
+- **Lifting a package out** now means running `npm install` in its new home to give
+  it its own lockfile — a one-command cost, paid only on the rare extraction, instead
+  of a mirrored-dep drift risk paid continuously.
+
+`tools/dev.mjs` remains a zero-dependency `spawn` wrapper (no `concurrently`) so the
+dep tree stays `npm audit`-clean on a fresh clone.
 
 ---
 

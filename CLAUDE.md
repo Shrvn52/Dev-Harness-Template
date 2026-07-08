@@ -27,13 +27,16 @@ guardrails an agent inherits and copies.
 | Conventions + how each is enforced                | this file → _Conventions_                                                     |
 | Architecture detail, the import/seam decisions    | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)                                |
 | Test tiers + what they don't cover                | [`docs/TESTING.md`](docs/TESTING.md)                                          |
+| Swap a stack layer (DB / framework / frontend)    | [`docs/SWAPPING.md`](docs/SWAPPING.md)                                        |
+| Keep pinned things fresh (deps, Node, gitleaks)   | [`docs/SETUP.md`](docs/SETUP.md) → _Keeping the template fresh_               |
 
 Keep WHAT/WHERE out of this file — it drifts. Keep WHY/DON'T _in_ it — code can't
 express intent.
 
 ## Development commands
 
-Run from the repo root. (cd-delegation monorepo — root scripts shell into the tiers.)
+Run from the repo root. (npm-workspaces monorepo — one `npm ci` installs every tier;
+root scripts delegate with `-w`.)
 
 | Command                    | Does                                                                                                                                                            |
 | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -46,6 +49,8 @@ Run from the repo root. (cd-delegation monorepo — root scripts shell into the 
 | `npm run test:integration` | API integration tier only.                                                                                                                                      |
 | `npm run test:smoke:dist`  | Boot the built `backend/dist` artifact under real Node ESM and hit `/api/health` + `POST /api/items` (needs `npm run build` first; zero-dep `tools/smoke.mjs`). |
 | `npm run test:ui`          | Playwright UI E2E (needs a built frontend + `npx playwright install chromium`).                                                                                 |
+| `npm run format`           | `prettier --write .` — fix formatting.                                                                                                                          |
+| `npm run format:check`     | `prettier --check .` — the CI-enforced formatting gate (lint lane).                                                                                             |
 
 This table is the SSOT for "the one right command". It must match `package.json`
 scripts exactly — the docs-audit skill checks for drift.
@@ -58,7 +63,7 @@ scripts exactly — the docs-audit skill checks for drift.
 | Frontend | React 19 + Vite 6 + TailwindCSS v4 + TanStack Query                              |
 | Shared   | Plain `.ts` (no build step) consumed across the boundary                         |
 | Tests    | Vitest (unit/integration/arch + jsdom) + Playwright (E2E)                        |
-| Lint     | ESLint flat config + `@typescript-eslint`                                        |
+| Lint     | ESLint flat config + `@typescript-eslint`; prettier for formatting (CI-enforced) |
 
 ## Architecture
 
@@ -119,7 +124,8 @@ Canonical format — **SSOT file · the invariant · the failure mode if violate
   (`ItemRow` vs `Item`). Invariant: row types mirror columns; API types are assembled in
   TS. **DON'T** "fix" `created_at` to `createdAt` on a row type — the split is intentional.
 - **Debt only shrinks.** SSOT: `tests/arch/ratchet-allowlist.test.ts`. Invariant: the set
-  of files carrying an `eslint-disable` equals the allowlist; it may shrink (clean a file)
+  of first-party source files (`backend/src`, `frontend/src`, `shared`, `tests` helpers)
+  carrying an `eslint-disable` equals the allowlist; it may shrink (clean a file)
   but never grow (silence a new disable). **DON'T** append to the allowlist to quiet lint —
   fix the issue, or document a genuine exception inline with a rationale.
 
@@ -138,6 +144,7 @@ Three tiers. Drift in tier 1 is a CI failure, not a review nit.
 | Every registry route has a backing router + unique `/api/` path | `tests/arch/registry-coverage.test.ts`           |
 | `eslint-disable` count only shrinks                             | `tests/arch/ratchet-allowlist.test.ts`           |
 | No `FIXME` markers outside the allowlist                        | `tests/arch/forbidden-token.test.ts`             |
+| Formatting is prettier-clean (`.prettierrc`)                    | CI lint lane — `npm run format:check`            |
 
 **2 — Documented exceptions** (must carry an inline `eslint-disable` + rationale):
 

@@ -29,12 +29,13 @@ your own in (start with [`docs/SETUP.md`](docs/SETUP.md)).
 
 ## Stack
 
-TypeScript monorepo (cd-delegation, not workspaces): **Hono** backend +
+TypeScript monorepo (npm workspaces, one lockfile): **Hono** backend +
 **React 19 / Vite 6 / Tailwind v4 / TanStack Query** frontend + **better-sqlite3** +
 **Zod**, tested with **Vitest** + **Playwright**. ~70% of the value (the CLAUDE.md
 discipline, the arch-test concept, the CI routing, the test-taxonomy shape, the
 committed `.claude/` harness) is stack-agnostic; the rest is TypeScript worked
-examples to adapt.
+examples to adapt — [`docs/SWAPPING.md`](docs/SWAPPING.md) maps exactly which is which
+and how to swap a layer out.
 
 ## Requirements
 
@@ -45,8 +46,8 @@ examples to adapt.
 
 1. Click **Use this template → Create a new repository** (top of the GitHub page), or
    `gh repo create <you>/<name> --template Shrvn52/Dev-Harness-Template`.
-2. Clone your new repo, then: `nvm use` → `npm ci` → `npm ci --prefix backend` →
-   `npm ci --prefix frontend`.
+2. Clone your new repo, then: `nvm use` → `npm ci` (one install covers every
+   workspace).
 3. Confirm green: `npm run lint && npm run typecheck && npm test`.
 4. Replace the `items` example with your own domain following the swap table in
    [`docs/SETUP.md`](docs/SETUP.md) — the arch tests and typecheck catch anything you miss.
@@ -54,10 +55,8 @@ examples to adapt.
 ## Quickstart
 
 ```bash
-nvm use                      # Node 22
-npm ci                       # root tooling (eslint, playwright, typecheck deps)
-npm ci --prefix backend
-npm ci --prefix frontend
+nvm use                      # Node 22 (the tested pin; engines floor is >=20)
+npm ci                       # ONE install — workspaces cover backend + frontend
 
 npm run dev                  # backend :8137 + frontend :5173
 
@@ -82,6 +81,7 @@ Everything above is green on a fresh clone — the wiring **is** the documentati
 | Understand the architecture + the import/seam decisions | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) |
 | Set up and start replacing the example domain           | [`docs/SETUP.md`](docs/SETUP.md)               |
 | Understand the test tiers + what they don't cover       | [`docs/TESTING.md`](docs/TESTING.md)           |
+| Swap a whole stack layer (DB / framework / frontend)    | [`docs/SWAPPING.md`](docs/SWAPPING.md)         |
 
 ## License
 

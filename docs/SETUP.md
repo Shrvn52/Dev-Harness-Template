@@ -8,9 +8,10 @@ then the example domain ripped out and replaced with yours.
 ## Prerequisites
 
 - **Node 22** — pinned in `.nvmrc`. With nvm: `nvm use` (or `nvm install` first).
-  The packages declare a supported range of `>=20 <23` and npm `>=10 <12`, but 22 is
-  the version the template is developed and CI'd against — use it unless you have a
-  reason not to.
+  The packages declare a floor of `>=20` with **no upper bound** — deliberately, so a
+  fresh clone on a future Node major installs instead of hard-failing on an `engines`
+  check. `.nvmrc` is the version the template is developed and CI'd against; use it
+  unless you have a reason not to.
 - **npm 10+** — ships with Node 22.
 - A C toolchain for `better-sqlite3`'s native build. On most Linux/macOS dev machines
   this is already present (build-essential / Xcode CLT); `npm ci` will compile
@@ -27,15 +28,11 @@ npm --version    # 10.x or 11.x
 
 ## Install
 
-This is a **cd-delegation monorepo, not npm workspaces** (see
-`docs/ARCHITECTURE.md` → "Why cd-delegation"). Each package owns its own
-`node_modules`, so you install in **three** places:
+This is an **npm workspaces monorepo** (see `docs/ARCHITECTURE.md` → "Why npm
+workspaces") — one lockfile, one install covers root tooling + backend + frontend:
 
 ```bash
-npm ci                    # root — Playwright, ESLint, typecheck deps
-cd backend && npm ci      # Hono, better-sqlite3, zod, tsx, vitest
-cd ../frontend && npm ci  # React 19, Vite 6, Tailwind v4, TanStack Query
-cd ..
+npm ci    # everything: ESLint/Playwright/prettier + Hono/better-sqlite3 + React/Vite
 ```
 
 `npm ci` does a clean, **reproducible** install from the committed lockfile — what CI
@@ -162,4 +159,31 @@ npm run lint && npm run build && npm test
 
 Keep the `lib/`, `config.ts`, `db.ts`, `index.ts`, `tools/dev.mjs`, the arch tests,
 and the three-place alias configs — that's the harness. Everything labeled
-"example" is yours to discard.
+"example" is yours to discard. Swapping a whole _layer_ (the DB, the HTTP framework,
+the frontend) rather than just the domain? That's a different operation — see
+[`SWAPPING.md`](SWAPPING.md).
+
+---
+
+## Keeping the template fresh
+
+The template deliberately ships **no update bots** (Renovate/Dependabot): a template
+is a starting point, not a deployed app, and bot config in a template is a promise
+the cloner's org may never honor. Staleness is instead handled by one **documented
+routine** — run it quarterly-ish, or whenever the scheduled `Audit` workflow goes red:
+
+1. **Deps** — `npm outdated` at the root (workspaces-aware). Bump what you care
+   about with `npm install <pkg>@latest -w <workspace>` (or at root for tooling),
+   then run the full gate below.
+2. **Node** — check the current LTS. Bump `.nvmrc` (and CI follows automatically —
+   every lane reads `node-version-file: .nvmrc`). The `engines` floor (`>=20`)
+   only needs raising when you _adopt_ a feature older Node lacks.
+3. **Pinned binaries** — `.github/workflows/pr.yml` pins a gitleaks version **and
+   its sha256** (from the release's `checksums.txt`). Refresh both together —
+   never bump the version without the matching hash.
+4. **Prove it** — the full gate:
+   `npm ci && npm run lint && npm run format:check && npm run typecheck && npm run build && npm test && npm run test:smoke:dist && npx playwright test`
+
+The scheduled `Audit` workflow (Mondays, `audit.yml`) is the alarm between routine
+runs — it fails on any high-severity advisory in the lockfile, which is your cue to
+run step 1 early.
