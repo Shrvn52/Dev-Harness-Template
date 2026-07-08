@@ -81,12 +81,15 @@ Override the backend port with `PORT` (the frontend proxy and Playwright both re
 PORT=9000 npm run dev:backend
 ```
 
-By default the backend runs against an **in-memory** SQLite DB (`DB_PATH=:memory:`),
-so it resets each restart and leaves no file artifact. Point it at a real file when
-you want persistence:
+> **⚠️ Dev data does not survive a file save.** The default DB is in-memory
+> (`DB_PATH=:memory:`) and the dev backend runs under `tsx watch` — **every source
+> save restarts the process and wipes all data**. This is deliberate (a template
+> must leave no file artifacts, and tests inject their own DB), but it surprises
+> people mid-flow. Want data that survives saves? Point at a file — anything
+> matching `*.db` is gitignored:
 
 ```bash
-DB_PATH=./app.db npm run dev:backend
+DB_PATH=./dev.db npm run dev:backend
 ```
 
 ---

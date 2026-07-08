@@ -97,12 +97,12 @@ scripts exactly — the docs-audit skill checks for drift.
 Resolved in one place: `backend/src/config.ts` (fail-loud on an invalid `PORT`).
 Mirror this table in `.env.example`.
 
-| Var         | Default     | Purpose                                                                                                                        |
-| ----------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `PORT`      | `8137`      | Backend HTTP port. Boot crashes on a non-integer / out-of-range value.                                                         |
-| `HOST`      | `127.0.0.1` | Bind address.                                                                                                                  |
-| `DB_PATH`   | `:memory:`  | SQLite location. In-memory by default (no file artifact); point at a file to persist. Tests inject their own DB via `setDb()`. |
-| `LOG_LEVEL` | `info`      | Minimum level `lib/logger.ts` emits (`debug`\|`info`\|`warn`\|`error`). Boot crashes on any other value.                       |
+| Var         | Default     | Purpose                                                                                                                                                                                                                                                                                                                                |
+| ----------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PORT`      | `8137`      | Backend HTTP port. Boot crashes on a non-integer / out-of-range value.                                                                                                                                                                                                                                                                 |
+| `HOST`      | `127.0.0.1` | Bind address.                                                                                                                                                                                                                                                                                                                          |
+| `DB_PATH`   | `:memory:`  | SQLite location. In-memory by default (no file artifact); point at a file to persist. Tests inject their own DB via `setDb()`. **Caveat:** under `npm run dev` (tsx watch), every file save restarts the process and **wipes the in-memory DB** — deliberate, see `docs/SETUP.md`; use `DB_PATH=./dev.db` for save-surviving dev data. |
+| `LOG_LEVEL` | `info`      | Minimum level `lib/logger.ts` emits (`debug`\|`info`\|`warn`\|`error`). Boot crashes on any other value.                                                                                                                                                                                                                               |
 
 ## Key Design Decisions
 
