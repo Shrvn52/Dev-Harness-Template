@@ -127,11 +127,13 @@ Canonical format — **SSOT file · the invariant · the failure mode if violate
 - **SQL-row types are snake_case; DTOs are camelCase.** SSOT: `shared/types.ts`
   (`ItemRow` vs `Item`). Invariant: row types mirror columns; API types are assembled in
   TS. **DON'T** "fix" `created_at` to `createdAt` on a row type — the split is intentional.
-- **Debt only shrinks.** SSOT: `tests/arch/ratchet-allowlist.test.ts`. Invariant: the set
-  of first-party source files (`backend/src`, `frontend/src`, `shared`, `tests` helpers)
-  carrying an `eslint-disable` equals the allowlist; it may shrink (clean a file)
-  but never grow (silence a new disable). **DON'T** append to the allowlist to quiet lint —
-  fix the issue, or document a genuine exception inline with a rationale.
+- **Debt only shrinks.** SSOT: `tests/arch/ratchet-allowlist.test.ts`. Invariant: every
+  first-party source file (`backend/src`, `frontend/src`, `shared`, `tests` helpers)
+  carrying `eslint-disable` directives appears in the allowlist with its **exact
+  occurrence count**; counts may shrink (clean a disable) but never grow — an
+  allowlisted file is not a blank cheque for more disables. **DON'T** append an entry or
+  raise a count to quiet lint — fix the issue, or document a genuine exception inline
+  with a rationale.
 
 ## Conventions
 
