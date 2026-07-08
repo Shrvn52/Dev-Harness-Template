@@ -102,6 +102,7 @@ export default [
       'backend/dist/**',
       'frontend/dist/**',
       '.claude/**',
+      '.archon/**',
     ],
   },
 

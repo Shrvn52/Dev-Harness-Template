@@ -5,6 +5,9 @@ package-lock.json
 playwright-report/
 test-results/
 
+# Archon's YAML tree is hand-aligned data — formatted on its own terms.
+.archon/
+
 # Archived plans are historical records; don't churn them.
 plans/archive/
 

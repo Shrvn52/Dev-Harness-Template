@@ -20,6 +20,7 @@ see [`SETUP.md`](SETUP.md) → "First real step".)
 | `tests/arch/` (every archetype)                    | Fitness tests over _your source files_ — they read the filesystem, not the framework.   |
 | `eslint.config.mjs`                                | The promotion-loop home. Selectors reference _your_ canonical fixes; the shape carries. |
 | `.claude/` (hook, agents, commands, skills)        | Tooling-level, framework-blind. The post-edit hook runs eslint on any TS file.          |
+| `.archon/invariants.yaml` (+ workflows)            | Judgment-rule data; re-point each rule's `trigger_paths` globs if you rename dirs.      |
 | `.github/workflows/` (lanes, filters, secret scan) | Update path filters if you rename dirs; the lane structure and drift guards carry.      |
 | `tools/dev.mjs` + `tools/smoke.mjs`                | Zero-dep spawn wrappers. Smoke is domain-neutral (health + dist/shared import).         |
 | `shared/` + the relative-import convention         | Any TS front/back split has this boundary. Keep `shared/package.json` (`type: module`). |

@@ -71,9 +71,14 @@ The guardrails worth knowing on day 1:
   that names the fix.
 - **The post-edit hook** (`.claude/hooks/post-edit-lint.sh`) — your agent gets
   lint feedback on every edit, not after the pile-up.
+- **Review invariants** (`.archon/invariants.yaml`) — the judgment-call rules no
+  linter can express ("don't leak internals in error messages"), as data:
+  `/review-pr` fans out a reviewer only for the rules your diff actually touches.
+  Enforcing a new one is a one-line append.
 - **The promotion loop** — when a review nit recurs, it becomes a lint selector or
-  arch test so review never repeats itself. This is the template's core idea;
-  copy the pattern, not just the files.
+  arch test (or, if it can never be mechanical, an invariant row) so review never
+  repeats itself. This is the template's core idea; copy the pattern, not just
+  the files.
 
 ## 4 — What this template will NOT do for you
 

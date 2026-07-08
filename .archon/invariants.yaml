@@ -1,0 +1,39 @@
+# Data-driven review invariants.
+#
+# Each row is one enforced review rule. Review workflows under workflows/ read
+# this file at runtime, match `trigger_paths` against a PR's changed files, and
+# fan out a reviewer only for the invariants that fire.
+#
+# Row schema:
+#   id            unique kebab-case identifier
+#   trigger_paths list of shell-style globs (**, *, ?, {a,b}); fires when ANY
+#                 glob matches ANY changed file
+#   rule          the contract a reviewer must enforce (prose)
+#   reason        the failure mode if the rule is broken (why it matters)
+#   severity      critical | important | minor
+#
+# Prefer a linter/type-checker for anything mechanically catchable. Invariants
+# are for REVIEW-ONLY contracts a linter cannot express.
+
+invariants:
+  # ── DELETABLE SAMPLE ROW ────────────────────────────────────────────────
+  # This is an example. A linter cannot catch "does this string leak a path?"
+  # — it needs a reviewer reading the message in context. Delete this row and
+  # replace it with rules that matter for your codebase.
+  - id: error-messages-no-internal-leak
+    trigger_paths:
+      - "backend/src/**/*.ts"
+    rule: >-
+      User-facing error responses must not leak internal absolute file paths,
+      stack traces, raw exception strings, or SQL. Surface a stable, generic
+      message to the client; log the full detail server-side only.
+    reason: >-
+      Leaked paths and stack traces hand an attacker the directory layout,
+      dependency versions, and framework internals — and confuse end users with
+      noise they can't act on. No linter rule expresses "this string is too
+      revealing"; it takes a reviewer reading the message in context.
+    severity: important
+  # ── END DELETABLE SAMPLE ROW ────────────────────────────────────────────
+
+# Append a row here to enforce a new review rule; workflows pick it up at
+# runtime via `cat .archon/invariants.yaml` — no workflow edit needed.

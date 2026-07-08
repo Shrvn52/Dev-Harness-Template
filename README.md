@@ -40,6 +40,10 @@ Claude Code, or follow [`docs/SETUP.md`](docs/SETUP.md).
 - **A committed `.claude/` harness** — a post-edit lint hook, advisory review
   subagents, `/start` (guided adoption), `/validate`, `/review-pr`, and a
   docs-audit skill, so the discipline travels with every clone.
+- **Review invariants as data** — `.archon/invariants.yaml` holds the judgment-call
+  review rules no linter can express; `/review-pr` loads it natively, and the
+  bundled [Archon](https://github.com/coleam00/archon) workflow skeletons automate
+  the same file.
 - **CI + GitHub conventions** — paths-filtered PR lanes with an always-on format
   gate and a single fan-in required check, lockfile-drift guard, sha-pinned
   supply chain (gitleaks binary, paths-filter action), issue/PR templates, a

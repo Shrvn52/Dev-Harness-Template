@@ -36,20 +36,33 @@ Try in order, stop at first hit:
 
 Note the changed files + the high-level intent (PR body, last commit message, or — for working-tree — the user's session context).
 
-### 2. Decide which reviewers apply
+### 2. Load the review invariants (data-driven judgment rules)
+
+```bash
+cat .archon/invariants.yaml 2>/dev/null
+```
+
+If the file exists, match each invariant's `trigger_paths` globs against the
+changed files. Rules that fire become the **invariant reviewer**'s brief (step 3).
+These are review-ONLY contracts a linter cannot express (e.g. "error messages
+must not leak internal paths") — the data file is the SSOT; never hardcode its
+rules here. File absent → skip this step silently.
+
+### 3. Decide which reviewers apply
 
 Based on the diff content and any explicit narrowing in `$ARGUMENTS`:
 
-| Reviewer                    | When                                                                           | Dispatch via                                                                                                        |
-| --------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
-| **Correctness pass**        | Always                                                                         | `Task` tool — a general-purpose subagent asked to hunt logic bugs, contract mismatches, and regressions in the diff |
-| **`silent-failure-hunter`** | Diff contains `try`/`catch`/`Promise`/`.catch(`/`throw`/error-handler patterns | `Task` tool                                                                                                         |
-| **`pr-test-analyzer`**      | Diff touches `tests/**`, `*.test.ts`, `*.spec.ts`, `e2e/**`                    | `Task` tool                                                                                                         |
-| **`code-simplifier`**       | Always (advisory polish pass)                                                  | `Task` tool                                                                                                         |
+| Reviewer                    | When                                                                           | Dispatch via                                                                                                         |
+| --------------------------- | ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| **Correctness pass**        | Always                                                                         | `Task` tool — a general-purpose subagent asked to hunt logic bugs, contract mismatches, and regressions in the diff  |
+| **Invariant reviewer**      | ≥1 invariant from `.archon/invariants.yaml` fired (step 2)                     | `Task` tool — a general-purpose subagent given the fired rules verbatim + the diff; reports upheld/violated per rule |
+| **`silent-failure-hunter`** | Diff contains `try`/`catch`/`Promise`/`.catch(`/`throw`/error-handler patterns | `Task` tool                                                                                                          |
+| **`pr-test-analyzer`**      | Diff touches `tests/**`, `*.test.ts`, `*.spec.ts`, `e2e/**`                    | `Task` tool                                                                                                          |
+| **`code-simplifier`**       | Always (advisory polish pass)                                                  | `Task` tool                                                                                                          |
 
-If `$ARGUMENTS` includes specific keywords (`errors`, `tests`, `simplify`, `correctness`), narrow to only those reviewers.
+If `$ARGUMENTS` includes specific keywords (`errors`, `tests`, `simplify`, `correctness`, `invariants`), narrow to only those reviewers.
 
-### 3. Fan out in parallel
+### 4. Fan out in parallel
 
 **Single message, multiple `Task` calls.** Dispatch all applicable subagents together so they run concurrently. Each Task receives:
 
@@ -60,9 +73,10 @@ If `$ARGUMENTS` includes specific keywords (`errors`, `tests`, `simplify`, `corr
 
 Sequential is wrong here — same signal, slower.
 
-### 4. Aggregate
+### 5. Aggregate
 
-Collect outputs into a single report:
+Collect outputs into a single report (when invariants were loaded, say which
+fired and which were skipped — silence reads as "not checked"):
 
 ```markdown
 # PR Review — <pr-title or branch-name or "Working tree">

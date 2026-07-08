@@ -153,7 +153,7 @@ Canonical format — **SSOT file · the invariant · the failure mode if violate
 
 ## Conventions
 
-Three tiers. Drift in tier 1 is a CI failure, not a review nit.
+Four tiers. Drift in tier 1 is a CI failure, not a review nit.
 
 **1 — Enforced mechanically** (lint selector or arch test — the current inventory
 lives in `eslint.config.mjs` + `tests/arch/`; highlights):
@@ -182,7 +182,15 @@ The lint/typecheck/arch perimeter covers ALL first-party source: `backend/src`,
   entry needs a rationale comment at the disable site AND an allowlist entry with
   the exact count (`tests/arch/ratchet-allowlist.test.ts`).
 
-**3 — Prose, promote on next leak** (not yet mechanical — make it tier 1 when it recurs):
+**3 — Review invariants, as data** (rules that can NEVER be mechanical — permanent
+judgment calls): they live in `.archon/invariants.yaml`, one row per rule with
+`trigger_paths` globs. `/review-pr` loads the file at review time and fans out a
+reviewer for the rules a diff actually fires (the Archon workflows automate the
+same data). Enforcing a new judgment rule is a one-line append — never hardcode
+it into a command or workflow.
+
+**4 — Prose, promote on next leak** (not yet mechanical — make it tier 1 when it recurs,
+or tier 3 if it never can be):
 
 - Mutation success returns the affected resource DTO (`201` + the created object,
   `200` + the updated object); failure is `{ error: string }` + status. No `{ message }`,
@@ -192,6 +200,7 @@ The lint/typecheck/arch perimeter covers ALL first-party source: `backend/src`,
 **The promotion loop:** when a review finding recurs, encode it as the smallest AST
 fingerprint in `eslint.config.mjs` (see the worked `no-restricted-syntax` selector) or
 as a `tests/arch/` fitness test (see `route-conventions` — born from exactly this loop).
+If it can never be mechanical, append it to `.archon/invariants.yaml` instead.
 The goal: review only ever does genuine judgment work.
 
 ## The committed `.claude/` harness
@@ -209,6 +218,12 @@ The goal: review only ever does genuine judgment work.
   `npm run gate`), `/review-pr` (fresh-context: the session that wrote code must not
   review it). **`skills/docs-audit/`** — the doc-drift loop for prose claims no arch
   test can check (reports land in `audits/`, gitignored).
+
+`.archon/` is committed for the same reason: `invariants.yaml` is the data file
+behind conventions tier 3 (loaded by `/review-pr` — no Archon install needed), and
+`workflows/` automates it for operators running the external Archon CLI. **DON'T**
+hardcode a judgment rule into a command/workflow prompt — append it to
+`invariants.yaml` so every consumer picks it up.
 
 ## Workflow rules
 
