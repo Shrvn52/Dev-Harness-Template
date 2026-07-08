@@ -22,7 +22,7 @@ pour your own product into a skeleton whose guardrails are already wired and gre
   thin `/validate` + `/review-pr` commands, so the discipline travels with every clone.
 - **CI + GitHub conventions** — a paths-filtered PR workflow, lockfile-drift guard,
   issue/PR templates, a label taxonomy.
-- **A docs-audit skill** + an **optional, fenced `.archon/`** invariants module.
+- **A docs-audit skill** — the doc-drift detection loop.
 
 The shipped backend/frontend/`items` domain is an **example** — delete it and pour
 your own in (start with [`docs/SETUP.md`](docs/SETUP.md)).

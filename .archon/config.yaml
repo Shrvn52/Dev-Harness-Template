@@ -1,7 +1,0 @@
-# Provider/model defaults for the .archon/ workflows.
-# Individual nodes may override `model` per-step (e.g. a cheap tier for
-# classifiers, a stronger tier for deep review).
-defaultAssistant: claude
-assistants:
-  claude:
-    model: sonnet      # Cheap default; nodes override to a stronger tier when needed.

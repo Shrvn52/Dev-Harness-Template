@@ -22,8 +22,6 @@ servers (and the UI lane needs a built frontend + `npx playwright install chromi
 - **`setDb()`** (`backend/src/db.ts`) injects a pre-migrated in-memory SQLite handle,
   so every test runs against a real database it fully controls — no shared state, no
   fixtures file to drift.
-- **`installMockExec()`** (`tests/integration/_helpers/mock-exec.ts`) stubs
-  `node:child_process` so subprocess-touching code is testable without real binaries.
 
 `tests/integration/test-app.smoke.test.ts` tests the harness itself — proof the
 seams work, so the other integration tests can't pass vacuously.
@@ -42,8 +40,9 @@ codebase: point it at any debt marker and the count can only shrink.
 Be honest about the gap — it tells an agent which changes still need manual
 verification:
 
-- **Real subprocess behaviour.** Integration tests mock `child_process`; they never
-  run a real external binary. A bug that only appears against the real tool slips through.
+- **Subprocesses / external binaries.** Nothing in the template shells out. If your
+  domain does, wrap the call in one promisified seam you can stub in integration
+  tests — don't call `child_process` inline in handlers.
 - **Real DB-file migrations.** Tests use a fresh in-memory DB. Migrating a _populated_
   on-disk database (column adds, backfills, ordering) is untested here.
 - **Real external APIs.** Rate limits, auth quirks, pagination, 3xx caching — none of

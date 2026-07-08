@@ -20,7 +20,7 @@ dev-harness-template/
 │   │   ├── config.ts       # env resolution (PORT/HOST/DB_PATH)
 │   │   ├── db.ts           # getDb/setDb/closeDb
 │   │   ├── schema.ts       # runMigrations()
-│   │   ├── lib/            # errors, route-error-handler, hono-app, zod-hook, exec
+│   │   ├── lib/            # errors, route-error-handler, hono-app, zod-hook, logger
 │   │   ├── routes/         # health.ts, items.ts, registry.ts (SSOT)
 │   │   └── schemas/        # zod input schemas
 │   └── tsconfig.json
@@ -32,7 +32,7 @@ dev-harness-template/
 │   ├── vite.config.ts      # @shared + @ aliases (place 1 of 3)
 │   ├── vitest.config.ts    # @shared + @ aliases (place 2 of 3)
 │   └── tsconfig.json       # @shared + @ paths (place 3 of 3)
-├── shared/                 # cross-boundary types + constants (NO build step)
+├── shared/                 # cross-boundary types (NO build step)
 ├── tests/                  # unit/ · integration/ · arch/
 └── e2e/                    # Playwright — example-api.spec.ts + ui/example.spec.ts
 ```
@@ -77,7 +77,7 @@ dep tree stays `npm audit`-clean on a fresh clone.
 
 ## The shared boundary
 
-`shared/` holds the only types and constants that cross the front/back wire. It has
+`shared/` holds the only types that cross the front/back wire. It has
 **no build step** — both packages compile it from source as part of their own `tsc`
 pass (the backend `include`s `../shared/**/*`; the frontend `include`s `../shared`).
 
@@ -241,17 +241,8 @@ const server = serve({ fetch: app.fetch, port: 0, hostname: '127.0.0.1' });
 This drives the real Hono app, the real router registry, the real zod validators,
 and the real error handler — over real HTTP — against a throwaway in-memory DB. It
 catches route/schema/wiring bugs the unit tier can't. (What it _misses_ — real
-subprocess, real DB-file migrations, real external APIs — is documented in
+DB-file migrations, real external APIs, real subprocesses — is documented in
 `TESTING.md`; that honesty is the asset.)
-
-### The subprocess seam
-
-`backend/src/lib/exec.ts` exports a single `execFileAsync = promisify(execFile)`.
-Everything that shells out goes through it. `tests/integration/_helpers/mock-exec.ts`
-stubs `node:child_process` (re-declaring the `util.promisify.custom` symbol so the
-promisified form still resolves `{ stdout, stderr }`), and the wrapper inherits the
-stub transparently — subprocess-touching code becomes testable without real binaries,
-and every call is recorded for assertion.
 
 ---
 

@@ -186,8 +186,6 @@ as a `tests/arch/` fitness test. The goal: review only ever does genuine judgmen
   claiming a change works — `dist/` is stale otherwise.
 - **`/validate` is a dispatcher, not an inline checker.** It runs the same scripts CI
   runs. Don't re-inline check logic.
-- **`.archon/` is optional.** It needs the external Archon CLI. Delete the directory if
-  you don't use it — nothing in the app reads it.
 
 ## Plans — search hygiene
 

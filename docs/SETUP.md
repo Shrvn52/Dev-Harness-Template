@@ -109,8 +109,8 @@ What each tier is:
 
 - **Unit** (`tests/unit/`) — pure functions, no I/O. The fastest, most numerous tier.
 - **Integration** (`tests/integration/`) — drives the **real** Hono app via
-  `buildApp()` with an in-memory DB injected through `setDb()`, over real HTTP. Mocks
-  the subprocess layer via `mock-exec.ts`. Catches route/schema/wiring bugs.
+  `buildApp()` with an in-memory DB injected through `setDb()`, over real HTTP.
+  Catches route/schema/wiring bugs.
 - **Arch** (`tests/arch/`) — four guardrail archetypes (route-registry coverage,
   no-duplicate-shared-exports, forbidden-token allowlist, shrink-only eslint-disable
   ratchet). These are structural invariants, not behavior.
@@ -145,7 +145,6 @@ out each in turn, and the tests/lint/build will tell you when you've missed one:
 | Layer               | File(s)                                                                                                | What to do                                                                                                                           |
 | ------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
 | Shared types        | `shared/types.ts`                                                                                      | Replace `ItemRow` / `Item` / `rowToItem` with your row + DTO + mapper. Keep the snake_case-row / camelCase-DTO split.                |
-| Shared constants    | `shared/constants.ts`                                                                                  | Swap `ITEM_SORT_FIELDS` etc. for yours (keep the const-array-derived-union pattern).                                                 |
 | Schema              | `backend/src/schema.ts`                                                                                | Change the `CREATE TABLE` in `runMigrations`. Grow it into a migration registry when needed (see `docs/ARCHITECTURE.md` → "Schema"). |
 | Input schemas       | `backend/src/schemas/example.ts`                                                                       | Replace `createItemSchema` with your zod schema(s).                                                                                  |
 | Routes              | `backend/src/routes/items.ts`                                                                          | Write your handlers with `createRouter()` + `zValidator`.                                                                            |

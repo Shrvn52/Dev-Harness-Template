@@ -55,11 +55,10 @@
   color: '008672'
   description: Extra attention appreciated
 
-# Subsystem (sync from .archon/subsystems.yaml)
+# Subsystem
 #
 # Add your project's subsystem labels here — one per architectural area
-# (e.g. frontend, backend, api, db, ci). Keep this list in lockstep with
-# .archon/subsystems.yaml so issue auto-labelling and workflow taxonomy agree.
+# (e.g. frontend, backend, api, db, ci).
 # Convention: color 'ededed' (neutral grey) so Kind/Priority/Scope stay visually dominant.
 #
 # - name: <subsystem>
