@@ -1,9 +1,24 @@
 # Dev-Harness-Template
 
 A starter repo that bakes in the **agentic-development discipline** — the harness
-layer that lets an AI agent refactor freely without silently breaking things. It is
-opinionated about _structure and discipline_, neutral about _what you build_. You
-pour your own product into a skeleton whose guardrails are already wired and green.
+layer that lets an AI agent (or you) refactor freely without silently breaking
+things. Opinionated about _structure and discipline_, neutral about _what you build_:
+you delete the example app and pour your own in; the guardrails are already wired
+and green.
+
+## Start here
+
+**→ [`START_HERE.md`](START_HERE.md)** — the whole onboarding on one page, for you
+AND your agent.
+
+```bash
+nvm use && npm ci    # Node 22 pin; ONE workspaces install
+npm run gate         # THE definition of green — same scripts CI runs
+npm run dev          # backend :8137 + frontend :5173
+```
+
+Replacing the example with your domain is a guided step: run **`/start`** in
+Claude Code, or follow [`docs/SETUP.md`](docs/SETUP.md).
 
 > One idea: **make the right thing mechanical and the wrong thing impossible to merge.**
 > Every convention an agent could violate is either a hard CI failure (a lint
@@ -13,73 +28,52 @@ pour your own product into a skeleton whose guardrails are already wired and gre
 ## What's in the box
 
 - **`CLAUDE.md`** — the engineering single-source-of-truth: WHY + DON'T, with WHAT +
-  WHERE offloaded. The first thing an agent reads.
-- **Mechanical enforcement** — a flat ESLint config (incl. one worked custom selector)
-  - a `tests/arch/` fitness-test tier that turns conventions into CI-blocking checks.
-- **Four green test tiers** — unit / integration (via the `buildApp()`+`setDb()` seams)
-  / arch / Playwright E2E. See [`docs/TESTING.md`](docs/TESTING.md).
-- **A committed `.claude/` harness** — a post-edit lint hook, review subagents, and
-  thin `/validate` + `/review-pr` commands, so the discipline travels with every clone.
-- **CI + GitHub conventions** — a paths-filtered PR workflow, lockfile-drift guard,
-  issue/PR templates, a label taxonomy.
-- **A docs-audit skill** — the doc-drift detection loop.
+  WHERE offloaded to code. The first thing an agent reads.
+- **Mechanical enforcement** — a flat ESLint config (incl. worked custom selectors)
+  plus a `tests/arch/` fitness-test tier that turns conventions into CI-blocking
+  checks: route-registry coverage, no duplicated shared types, no hand-parsed
+  bodies, a shrink-only lint-debt ratchet, env docs pinned to code, and more (the
+  directory is the inventory).
+- **Green test tiers** — unit / integration (via the `buildApp()`+`setDb()` seams) /
+  arch / frontend jsdom / Playwright E2E, plus a domain-neutral built-artifact
+  smoke. One command — **`npm run gate`** — runs the lot at CI-parity.
+- **A committed `.claude/` harness** — a post-edit lint hook, advisory review
+  subagents, `/start` (guided adoption), `/validate`, `/review-pr`, and a
+  docs-audit skill, so the discipline travels with every clone.
+- **CI + GitHub conventions** — paths-filtered PR lanes with an always-on format
+  gate and a single fan-in required check, lockfile-drift guard, sha-pinned
+  supply chain (gitleaks binary, paths-filter action), issue/PR templates, a
+  label taxonomy.
+- **A minimal ship path** — `npm run build && npm start` serves API + frontend on
+  one port; one `Dockerfile`. Nothing more, on purpose.
 
-The shipped backend/frontend/`items` domain is an **example** — delete it and pour
-your own in (start with [`docs/SETUP.md`](docs/SETUP.md)).
+The shipped backend/frontend/`items` domain is an **example to delete** —
+[`START_HERE.md`](START_HERE.md) §4 also lists what the template deliberately does
+NOT do (auth, real migrations, orchestration), so you can plan day 2 instead of
+discovering it.
 
 ## Stack
 
 TypeScript monorepo (npm workspaces, one lockfile): **Hono** backend +
 **React 19 / Vite 6 / Tailwind v4 / TanStack Query** frontend + **better-sqlite3** +
-**Zod**, tested with **Vitest** + **Playwright**. ~70% of the value (the CLAUDE.md
-discipline, the arch-test concept, the CI routing, the test-taxonomy shape, the
-committed `.claude/` harness) is stack-agnostic; the rest is TypeScript worked
-examples to adapt — [`docs/SWAPPING.md`](docs/SWAPPING.md) maps exactly which is which
-and how to swap a layer out.
+**Zod**, tested with **Vitest** + **Playwright**. Most of the value (the CLAUDE.md
+discipline, the arch-test concept, the CI routing, the test taxonomy, the committed
+`.claude/` harness) is stack-agnostic; the rest is worked examples to adapt —
+[`docs/SWAPPING.md`](docs/SWAPPING.md) maps which is which and how to swap a layer.
 
 ## Requirements
 
 - Node **22** (pinned in `.nvmrc`) · npm 10+
 - For the UI E2E tier: `npx playwright install chromium`
 
-## Use this template
-
-1. Click **Use this template → Create a new repository** (top of the GitHub page), or
-   `gh repo create <you>/<name> --template Shrvn52/Dev-Harness-Template`.
-2. Clone your new repo, then: `nvm use` → `npm ci` (one install covers every
-   workspace).
-3. Confirm green: `npm run lint && npm run typecheck && npm test`.
-4. Replace the `items` example with your own domain following the swap table in
-   [`docs/SETUP.md`](docs/SETUP.md) — the arch tests and typecheck catch anything you miss.
-
-## Quickstart
-
-```bash
-nvm use                      # Node 22 (the tested pin; engines floor is >=20)
-npm ci                       # ONE install — workspaces cover backend + frontend
-
-npm run dev                  # backend :8137 + frontend :5173
-
-npm run lint                 # mechanical conventions
-npm test                     # unit + integration + arch (+ frontend jsdom)
-npm run test:integration     # API integration tier only
-npm run build                # frontend then backend
-npx playwright install chromium && npm run build && npm run test:ui   # UI E2E
-```
-
-Everything above is green on a fresh clone — the wiring **is** the documentation.
-
-> Use `npm ci` for a **reproducible** install from the committed lockfile (what CI
-> runs, and what the `lockfile-drift` guard protects). Reach for `npm install <pkg>`
-> only when you are **intentionally adding or bumping a dependency**.
-
 ## Where to go next
 
 | You want to…                                            | Read                                           |
 | ------------------------------------------------------- | ---------------------------------------------- |
+| Onboard yourself + your agent                           | [`START_HERE.md`](START_HERE.md)               |
 | Understand the conventions + why each exists            | [`CLAUDE.md`](CLAUDE.md)                       |
-| Understand the architecture + the import/seam decisions | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) |
 | Set up and start replacing the example domain           | [`docs/SETUP.md`](docs/SETUP.md)               |
+| Understand the architecture + the import/seam decisions | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) |
 | Understand the test tiers + what they don't cover       | [`docs/TESTING.md`](docs/TESTING.md)           |
 | Swap a whole stack layer (DB / framework / frontend)    | [`docs/SWAPPING.md`](docs/SWAPPING.md)         |
 
