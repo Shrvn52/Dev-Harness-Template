@@ -47,6 +47,9 @@ describe('Architecture — no forbidden tokens (FIXME)', () => {
       .map((f) => relative(REPO_ROOT, f).split('\\').join('/'))
       .filter((r) => !ALLOWLIST.has(r))
       .filter((r) => readFileSync(join(REPO_ROOT, r), 'utf8').includes(TOKEN));
-    expect(hits, `${TOKEN} markers found — fix, file an issue, or drop them:\n  ${hits.join('\n  ')}`).toEqual([]);
+    expect(
+      hits,
+      `${TOKEN} markers found — fix, file an issue, or drop them:\n  ${hits.join('\n  ')}`,
+    ).toEqual([]);
   });
 });

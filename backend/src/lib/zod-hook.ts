@@ -11,7 +11,9 @@ export function zodErrorHook(
   c: Context,
 ) {
   if (!result.success) {
-    const messages = result.error!.issues.map((i) => `${i.path.map(String).join('.')}: ${i.message}`);
+    const messages = result.error!.issues.map(
+      (i) => `${i.path.map(String).join('.')}: ${i.message}`,
+    );
     return c.json({ error: messages.join('; ') }, 400);
   }
 }

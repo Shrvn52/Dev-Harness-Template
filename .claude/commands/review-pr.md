@@ -1,7 +1,7 @@
 ---
 description: Fresh-context PR or working-tree review — fans out specialized reviewers in parallel.
 argument-hint: [review-aspects | pr-number]
-allowed-tools: ["Bash", "Glob", "Grep", "Read", "Task"]
+allowed-tools: ['Bash', 'Glob', 'Grep', 'Read', 'Task']
 ---
 
 # Fresh-Context PR Review
@@ -40,12 +40,12 @@ Note the changed files + the high-level intent (PR body, last commit message, or
 
 Based on the diff content and any explicit narrowing in `$ARGUMENTS`:
 
-| Reviewer | When | Dispatch via |
-|---|---|---|
-| **Correctness pass** | Always | `Task` tool — a general-purpose subagent asked to hunt logic bugs, contract mismatches, and regressions in the diff |
-| **`silent-failure-hunter`** | Diff contains `try`/`catch`/`Promise`/`.catch(`/`throw`/error-handler patterns | `Task` tool |
-| **`pr-test-analyzer`** | Diff touches `tests/**`, `*.test.ts`, `*.spec.ts`, `e2e/**` | `Task` tool |
-| **`code-simplifier`** | Always (advisory polish pass) | `Task` tool |
+| Reviewer                    | When                                                                           | Dispatch via                                                                                                        |
+| --------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| **Correctness pass**        | Always                                                                         | `Task` tool — a general-purpose subagent asked to hunt logic bugs, contract mismatches, and regressions in the diff |
+| **`silent-failure-hunter`** | Diff contains `try`/`catch`/`Promise`/`.catch(`/`throw`/error-handler patterns | `Task` tool                                                                                                         |
+| **`pr-test-analyzer`**      | Diff touches `tests/**`, `*.test.ts`, `*.spec.ts`, `e2e/**`                    | `Task` tool                                                                                                         |
+| **`code-simplifier`**       | Always (advisory polish pass)                                                  | `Task` tool                                                                                                         |
 
 If `$ARGUMENTS` includes specific keywords (`errors`, `tests`, `simplify`, `correctness`), narrow to only those reviewers.
 
@@ -68,18 +68,23 @@ Collect outputs into a single report:
 # PR Review — <pr-title or branch-name or "Working tree">
 
 ## Critical (must fix before merge / commit)
+
 - [reviewer-name] <issue> — `file.ts:42`
 
 ## Important (should fix)
+
 - [reviewer-name] <issue> — `file.ts:87`
 
 ## Suggestions
+
 - [reviewer-name] <suggestion> — `file.ts:120`
 
 ## Strengths
+
 - <what the diff did well>
 
 ## Verdict
+
 APPROVE | APPROVE_WITH_CHANGES | REQUEST_CHANGES
 ```
 

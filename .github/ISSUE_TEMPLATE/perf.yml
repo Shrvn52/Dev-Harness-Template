@@ -1,7 +1,7 @@
 name: Performance issue
 description: Report a perf regression or bottleneck
-title: "[Perf] "
-labels: ["perf"]
+title: '[Perf] '
+labels: ['perf']
 body:
   - type: input
     id: metric

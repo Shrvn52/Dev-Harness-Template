@@ -42,7 +42,13 @@ describe('Architecture — route registry coverage', () => {
     // cwd-relative readdir would read the wrong dir; resolve from this file.
     const here = dirname(fileURLToPath(import.meta.url)); // tests/arch/
     const routesDir = resolve(here, '..', '..', 'backend/src/routes');
-    const src = readFileSync(join(routesDir, 'registry.ts'), 'utf8');
+    // Strip // and /* */ comments before matching — a commented-out import must
+    // count as UNregistered, not sneak past the regex below. (Crude lexing is
+    // fine here: registry.ts holds no string literals containing comment tokens,
+    // and the import specifiers we match live outside comments by definition.)
+    const src = readFileSync(join(routesDir, 'registry.ts'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\/\/.*$/gm, '');
     const files = readdirSync(routesDir).filter((f) => f.endsWith('.ts') && f !== 'registry.ts');
     expect(files.length).toBeGreaterThan(0); // sanity floor — no vacuous pass
     const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

@@ -47,10 +47,11 @@ non-vacuous** (catches an injected `TS2322` in a `tests/` file), and the registr
 
 ### Cluster A — Example domain (items #6, #8, #11 — they compose)
 
-One coherent edit to the `items` example so the template *demonstrates* the patterns it
+One coherent edit to the `items` example so the template _demonstrates_ the patterns it
 preaches (full CRUD, param validation, typed errors end-to-end).
 
 **#11 — Add `PUT /:id` route using `updateItemSchema`** (review-finding)
+
 - Why: `backend/src/schemas/example.ts:16` defines `updateItemSchema = createItemSchema.partial()`
   with a "can't drift" comment, but no route consumes it — the pattern is advertised, never
   demonstrated. Completing CRUD also gives #6/#8 a natural home.
@@ -76,6 +77,7 @@ preaches (full CRUD, param validation, typed errors end-to-end).
 - Rejected alt: deleting `updateItemSchema` (leaves the `.partial()` lesson undemonstrated).
 
 **#8 — Path-param validation on `GET /:id` and `PUT /:id`** (review-finding)
+
 - Why: `items.ts:19` hand-parses `Number(c.req.param('id'))`. CLAUDE.md preaches "validate via
   zValidator, never hand-parse" but the template never shows `zValidator('param', …)` — and
   this is the pattern people copy.
@@ -86,6 +88,7 @@ preaches (full CRUD, param validation, typed errors end-to-end).
   `999`. So `/api/items/abc` → clean 400 `{error}`; existing `/api/items/999` → 404 test stays green.
 
 **#6 — Unit-test the typed-error mapper** (review-finding)
+
 - Why: `lib/route-error-handler.ts` has 3 branches; only the `AppError` path is exercised
   (the 404 in `items.test.ts`). The HTTPException pass-through (`:23`) and the **unknown→500
   no-leak** fallback (`:28-29`, a security property) are untested; `ConflictError`/
@@ -110,6 +113,7 @@ body → 400** (param `zValidator`); `GET /api/items/abc` → 400. Plus the new 
 ### Cluster B — Built-artifact correctness (item #3)
 
 **#3 — `nodenext` + built-artifact smoke** (review-finding/enrichment)
+
 - Why: `tsconfig.base.json` sets `moduleResolution: "bundler"`, inherited by the backend, which
   actually RUNS under Node's NodeNext ESM resolver (`npm start` = `node dist/...`). Works today
   only because every relative import hand-carries `.js`; `bundler` doesn't enforce that. An
@@ -137,7 +141,7 @@ body → 400** (param `zValidator`); `GET /api/items/abc` → 400. Plus the new 
        first" and exit 1) and `child.on('exit', …)`. Gate the exit handler on a `let ready = false`
        flag that flips `true` once the health poll returns 200: `on('exit')` rejects **only if
        `!ready`** (an exit before readiness = boot crash), so the deliberate `finally` SIGTERM during
-       teardown — which fires `on('exit')` *after* success — is ignored, not misread as a failure.
+       teardown — which fires `on('exit')` _after_ success — is ignored, not misread as a failure.
        Settle the result promise once (guard against double-settle). Mirror `tools/dev.mjs`'s
        `shuttingDown` re-entry guard. A bound-port collision (EADDRINUSE on 8138) surfaces as the poll
        timeout — fail loud; the operator frees the port.
@@ -172,6 +176,7 @@ body → 400** (param `zValidator`); `GET /api/items/abc` → 400. Plus the new 
 ### Cluster C — Arch test (item #7)
 
 **#7 — Registry reverse-coverage** (review-finding)
+
 - Why: `tests/arch/registry-coverage.test.ts` enforces registry→backing but not
   backing→registry. A new `routes/foo.ts` not added to `ROUTES` stays green + silently
   unmounted. `docs/ARCHITECTURE.md:324-332` recommends copying this test for a migration
@@ -181,15 +186,15 @@ body → 400** (param `zValidator`); `GET /api/items/abc` → 400. Plus the new 
   `:15-17`), then for each file asserts the registry **source** contains the exact
   `'./<base>.js'` **import specifier**. **Critical:** match the `.js` import form, NOT the
   on-disk `.ts` filename — `registry.ts:2-3` uses NodeNext ESM imports (`import health from
-  './health.js'`), so `src.includes('health.ts')` finds ZERO matches for a correctly-registered
+'./health.js'`), so `src.includes('health.ts')` finds ZERO matches for a correctly-registered
   route (verified). Use a quote-anchored regex to avoid prefix false-positives (a base that is a
   substring of another registered import). Matching the `.js` import form is reliable because it is
-  *already* the in-repo convention (`registry.ts:2-3` uses `'./health.js'`/`'./items.js'` today,
-  independent of #3) — #3 (nodenext) only makes a *future* extensionless drift impossible. So #7
+  _already_ the in-repo convention (`registry.ts:2-3` uses `'./health.js'`/`'./items.js'` today,
+  independent of #3) — #3 (nodenext) only makes a _future_ extensionless drift impossible. So #7
   (Cluster C) does **not** require #3 (Cluster B) first; B and C are independently landable.
   Concrete heuristic to embed (imports as in the sibling arch tests —
   `import { fileURLToPath } from 'node:url'; import { dirname, join, resolve } from 'node:path';
-  import { readFileSync, readdirSync } from 'node:fs'`):
+import { readFileSync, readdirSync } from 'node:fs'`):
   ```ts
   // cwd-independent anchoring — `npm test` runs from cwd: backend, so a cwd-relative
   // readdirSync('backend/src/routes') would read the wrong dir; resolve from this file instead.
@@ -197,13 +202,14 @@ body → 400** (param `zValidator`); `GET /api/items/abc` → 400. Plus the new 
   const routesDir = resolve(here, '..', '..', 'backend/src/routes');
   const registryPath = join(routesDir, 'registry.ts');
   const src = readFileSync(registryPath, 'utf8');
-  const files = readdirSync(routesDir).filter(f => f.endsWith('.ts') && f !== 'registry.ts');
+  const files = readdirSync(routesDir).filter((f) => f.endsWith('.ts') && f !== 'registry.ts');
   expect(files.length).toBeGreaterThan(0); // sanity floor
   const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   for (const f of files) {
     const base = f.replace(/\.ts$/, '');
     const re = new RegExp(`['"]\\./${esc(base)}\\.js['"]`);
-    expect(re.test(src),
+    expect(
+      re.test(src),
       `routes/${f} exposes a router but is not registered in ROUTES — add it, or move non-router helpers to lib/`,
     ).toBe(true);
   }
@@ -219,12 +225,13 @@ body → 400** (param `zValidator`); `GET /api/items/abc` → 400. Plus the new 
 ### Cluster D — CI / workflows (items #1, #10, #13)
 
 **#1 — Scheduled audit lane** (enrichment)
+
 - Why: README/CLAUDE.md headline "0 vulnerabilities" but nothing runs `npm audit`; it rots silently.
 - Do: new `.github/workflows/audit.yml` — `on: { schedule: [{cron: '0 6 * * 1'}], workflow_dispatch: {} }`.
   `actions/checkout@v4` + `actions/setup-node` (`node-version-file: .nvmrc`), then **NO `npm ci`** —
   `npm audit` resolves from the lockfile alone (verified: audit against a dir with only
   package.json + lockfile returns "0 vulnerabilities", exit 0). Three steps: `npm audit
-  --audit-level=high` at root, `--prefix backend`, `--prefix frontend` (verified: `--prefix`
+--audit-level=high` at root, `--prefix backend`, `--prefix frontend` (verified: `--prefix`
   audits each subproject's own tree — they are three separate npm projects, no workspaces). Put
   `if: always()` on the 2nd and 3rd steps so a root vuln doesn't hide a backend/frontend one —
   but `if: always()` is for **visibility only**: each audit step must still fail the job on its own
@@ -240,6 +247,7 @@ body → 400** (param `zValidator`); `GET /api/items/abc` → 400. Plus the new 
 - Rejected alt: hard per-PR gate (can red-block unrelated PRs on an unfixable transitive).
 
 **#10 — e2e paths-filter includes package files** (review-finding)
+
 - Why: `pr.yml:55-60` e2e filter omits package files, so a dep-only bump (the case most likely
   to break E2E) skips the only lane that'd catch it. (lint/backend lanes already watch package files.)
 - Do: add `package*.json`, `backend/package*.json`, `frontend/package*.json` to the `e2e` filter
@@ -247,6 +255,7 @@ body → 400** (param `zValidator`); `GET /api/items/abc` → 400. Plus the new 
   already uses brace expansion.)
 
 **#13 — Gitleaks secret-scan lane** (enrichment)
+
 - Why: widely-cloned template; cheap leak insurance; reinforces the "don't leak" ethos.
 - Do: add a `secret-scan` job to `pr.yml` using `gitleaks/gitleaks-action@v3` with
   `actions/checkout@v4` `fetch-depth: 0`. **Pin `@v3`, not `@v2`** — `@v2` runs on the Node 20
@@ -270,6 +279,7 @@ body → 400** (param `zValidator`); `GET /api/items/abc` → 400. Plus the new 
 ### Cluster E — Typecheck tooling (item #2) — the trickiest item
 
 **#2 — Tests-inclusive typecheck gate** (review-finding)
+
 - Why: no tsconfig includes `tests/`; `frontend/tsconfig.json` excludes `*.test.tsx`; Vitest
   (esbuild) strips types without checking. A type error in any test/arch file passes all gates —
   the guardrail code is itself unguarded.
@@ -298,10 +308,11 @@ body → 400** (param `zValidator`); `GET /api/items/abc` → 400. Plus the new 
      {
        "extends": "./tsconfig.base.json",
        "compilerOptions": {
-         "noEmit": true, "baseUrl": ".",
-         "paths": { "@shared/*": ["shared/*"] }
+         "noEmit": true,
+         "baseUrl": ".",
+         "paths": { "@shared/*": ["shared/*"] },
        },
-       "include": ["tests", "shared", "backend/src"]
+       "include": ["tests", "shared", "backend/src"],
      }
      ```
   3. Script (root): `"typecheck:backend": "tsc -p tsconfig.typecheck.json"` (root-rooted now — no
@@ -310,8 +321,8 @@ body → 400** (param `zValidator`); `GET /api/items/abc` → 400. Plus the new 
      there)" claim becomes "root holds Playwright, ESLint, and the test-only type deps the
      cross-cutting `tests/` tier imports" (the accepted cost of this approach). Do this in the same
      pass as #4's ARCHITECTURE.md edit.
-  Backend src is checked here under `bundler` (base) — fine; extension **enforcement** is the build's
-  job (#3 nodenext), and backend src checks clean under both modes. The new surface this adds is `tests/`.
+     Backend src is checked here under `bundler` (base) — fine; extension **enforcement** is the build's
+     job (#3 nodenext), and backend src checks clean under both modes. The new surface this adds is `tests/`.
   - Rejected alt — `paths`-remapping the bare specifiers into `backend/node_modules` (keeps root
     thin but is a hand-maintained map: a new test-only import missing from it fails TS2307 on an
     installed module — a silent hole in the very gate #2 builds). Rejected in favour of root-devDeps.
@@ -331,7 +342,7 @@ body → 400** (param `zValidator`); `GET /api/items/abc` → 400. Plus the new 
 
 - **Do — aggregate:** root `"typecheck": "npm run typecheck:backend && npm run typecheck:frontend"`
   (mirrors how `test` aggregates). Add a CI lane mirroring the lint lane that runs `npm run
-  typecheck`; add it to `.claude/commands/validate.md` as lane 5; and add a `npm run typecheck` row
+typecheck`; add it to `.claude/commands/validate.md` as lane 5; and add a `npm run typecheck` row
   to the CLAUDE.md Development-commands table — list only the aggregate (the table lists user-facing
   aggregate scripts and already omits tier-internal aliases like `test:backend`/`test:frontend`, so
   the docs-audit drift check verifies each listed row resolves to a real script, not strict
@@ -347,6 +358,7 @@ body → 400** (param `zValidator`); `GET /api/items/abc` → 400. Plus the new 
 ### Cluster F — Hook visibility (item #9)
 
 **#9 — Surface the silently-disabled lint hook** (review-finding)
+
 - Why: `.claude/hooks/post-edit-lint.sh` no-ops (exit 0) when `jq` is missing (`:15`) — fail-safe
   but fail-silent; the user believes lint is active when it isn't. On-thesis: a mechanical
   guardrail that disables itself invisibly.
@@ -366,9 +378,10 @@ body → 400** (param `zValidator`); `GET /api/items/abc` → 400. Plus the new 
 ### Cluster G — Docs (items #4, #12)
 
 **#4 — `npm ci` in setup docs** (revalidation-fix)
+
 - Why: `README.md:48-50` and `docs/SETUP.md:35-37` tell new users `npm install` ×3, but CI
   installs exclusively via `npm ci` (`pr.yml:74,90,107,123-125`) and ships a `lockfile-drift`
-  guard (`pr.yml:136-148`) *because* `npm install` rewrites lockfiles (commit `0a8f295`). The
+  guard (`pr.yml:136-148`) _because_ `npm install` rewrites lockfiles (commit `0a8f295`). The
   first command a user runs contradicts the enforced reproducible-install posture.
 - Do (switch to `npm ci`):
   - `README.md:48-50` (the 3 install commands in the Quickstart ```bash fence at :46).
@@ -391,6 +404,7 @@ body → 400** (param `zValidator`); `GET /api/items/abc` → 400. Plus the new 
   the intentional `npm install <pkg>` guidance sentence(s).
 
 **#12 — "Use this template" on-ramp** (enrichment)
+
 - Why: no GitHub-template designation, no one-line on-ramp; first-clone UX is the
   `docs/SETUP.md` hand-edit table only.
 - Do: add a short README "Use this template" section (Use-template button → `nvm use` → `npm ci`
@@ -423,6 +437,7 @@ it with the harness work. Delete any leftover review scratch (`tsconfig.typechec
 `frontend/tsconfig.typecheck.json` configs once #2 creates them.
 
 From repo root, all green:
+
 ```
 npm run lint
 npm run typecheck                                # new (#2) — contingent on the #2a/#2b configs; green verified on clean npm ci
@@ -436,6 +451,7 @@ npm audit --audit-level=high                     # root tree — still 0 (#1 san
 npm audit --audit-level=high --prefix backend    # backend tree — still 0
 npm audit --audit-level=high --prefix frontend   # frontend tree — still 0
 ```
+
 Plus: `git status` clean of stray artifacts; CI workflows (`pr.yml`, `audit.yml`) parse; the new
 arch reverse-check and the typecheck gate each verified red-on-violation then reverted.
 
@@ -451,18 +467,18 @@ Or one "harness hardening" PR for a single review.
 ## Correction log (this plan was adversarially verified — 18 confirmed fixes folded in)
 
 1. Count 11→12 IN items. 2. `docs/SETUP.md` (no root SETUP.md); install lines are README:48-50 /
-docs/SETUP.md:35-37. 3. Smoke artifact path is `backend/dist/backend/src/index.js` (no top-level
-`dist/`). 4. Smoke renamed `test:smoke:dist` (avoid clash with existing in-process
-`*.smoke.test.ts`). 5. `#2` naive root config is RED on clean clone (~14 TS2307) → fix is root-devDeps + a root
-typecheck config (the `paths`-remap alternative was dropped as a silent-hole guardrail); frontend
-lane stays separate. 6. `better-sqlite3` resolves via `@types/better-sqlite3` (types-only). 7. `#2b` frontend typecheck closes the open item (verified). 8. Registry
-reverse-check matches `'./<base>.js'` (anchored regex), NOT `.ts`. 9. PUT empty-body guard
-(`BadRequestError`); mechanism is NOT-NULL→500, not a bind error. 10. Smoke = zero-dep
-`tools/smoke.mjs` (node `fetch` poll, port 8138, `:memory:`, SIGTERM), not inline bash/curl.
-11. `audit.yml` skips `npm ci`; `if: always()` on 2nd/3rd steps. 12. Final gate audits ×3
-(root + `--prefix backend` + `--prefix frontend`). 13. `$PPID` sentinel is stable (don't "fix"
-to `session_id`). 14. `#4` also fixes docs/SETUP.md:16, docs/ARCHITECTURE.md:59,
-plans/2026-06-17-harness-blueprint.md:228; drop the CLAUDE.md clause (no matches). 15. Per-cluster
-gate vs final gate: `npm audit` deliberately final-only. 16. nodenext build verified clean (no
-interop nits). 17. param-validation reject/pass cases verified. 18. route-error-handler unit test
-verified callable with a mock Context.
+   docs/SETUP.md:35-37. 3. Smoke artifact path is `backend/dist/backend/src/index.js` (no top-level
+   `dist/`). 4. Smoke renamed `test:smoke:dist` (avoid clash with existing in-process
+   `*.smoke.test.ts`). 5. `#2` naive root config is RED on clean clone (~14 TS2307) → fix is root-devDeps + a root
+   typecheck config (the `paths`-remap alternative was dropped as a silent-hole guardrail); frontend
+   lane stays separate. 6. `better-sqlite3` resolves via `@types/better-sqlite3` (types-only). 7. `#2b` frontend typecheck closes the open item (verified). 8. Registry
+   reverse-check matches `'./<base>.js'` (anchored regex), NOT `.ts`. 9. PUT empty-body guard
+   (`BadRequestError`); mechanism is NOT-NULL→500, not a bind error. 10. Smoke = zero-dep
+   `tools/smoke.mjs` (node `fetch` poll, port 8138, `:memory:`, SIGTERM), not inline bash/curl.
+2. `audit.yml` skips `npm ci`; `if: always()` on 2nd/3rd steps. 12. Final gate audits ×3
+   (root + `--prefix backend` + `--prefix frontend`). 13. `$PPID` sentinel is stable (don't "fix"
+   to `session_id`). 14. `#4` also fixes docs/SETUP.md:16, docs/ARCHITECTURE.md:59,
+   plans/2026-06-17-harness-blueprint.md:228; drop the CLAUDE.md clause (no matches). 15. Per-cluster
+   gate vs final gate: `npm audit` deliberately final-only. 16. nodenext build verified clean (no
+   interop nits). 17. param-validation reject/pass cases verified. 18. route-error-handler unit test
+   verified callable with a mock Context.

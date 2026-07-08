@@ -2,7 +2,7 @@
 
 A starter repo that bakes in the **agentic-development discipline** — the harness
 layer that lets an AI agent refactor freely without silently breaking things. It is
-opinionated about *structure and discipline*, neutral about *what you build*. You
+opinionated about _structure and discipline_, neutral about _what you build_. You
 pour your own product into a skeleton whose guardrails are already wired and green.
 
 > One idea: **make the right thing mechanical and the wrong thing impossible to merge.**
@@ -15,7 +15,7 @@ pour your own product into a skeleton whose guardrails are already wired and gre
 - **`CLAUDE.md`** — the engineering single-source-of-truth: WHY + DON'T, with WHAT +
   WHERE offloaded. The first thing an agent reads.
 - **Mechanical enforcement** — a flat ESLint config (incl. one worked custom selector)
-  + a `tests/arch/` fitness-test tier that turns conventions into CI-blocking checks.
+  - a `tests/arch/` fitness-test tier that turns conventions into CI-blocking checks.
 - **Four green test tiers** — unit / integration (via the `buildApp()`+`setDb()` seams)
   / arch / Playwright E2E. See [`docs/TESTING.md`](docs/TESTING.md).
 - **A committed `.claude/` harness** — a post-edit lint hook, review subagents, and
@@ -29,12 +29,13 @@ your own in (start with [`docs/SETUP.md`](docs/SETUP.md)).
 
 ## Stack
 
-TypeScript monorepo (cd-delegation, not workspaces): **Hono** backend +
+TypeScript monorepo (npm workspaces, one lockfile): **Hono** backend +
 **React 19 / Vite 6 / Tailwind v4 / TanStack Query** frontend + **better-sqlite3** +
 **Zod**, tested with **Vitest** + **Playwright**. ~70% of the value (the CLAUDE.md
 discipline, the arch-test concept, the CI routing, the test-taxonomy shape, the
 committed `.claude/` harness) is stack-agnostic; the rest is TypeScript worked
-examples to adapt.
+examples to adapt — [`docs/SWAPPING.md`](docs/SWAPPING.md) maps exactly which is which
+and how to swap a layer out.
 
 ## Requirements
 
@@ -45,8 +46,8 @@ examples to adapt.
 
 1. Click **Use this template → Create a new repository** (top of the GitHub page), or
    `gh repo create <you>/<name> --template Shrvn52/Dev-Harness-Template`.
-2. Clone your new repo, then: `nvm use` → `npm ci` → `npm ci --prefix backend` →
-   `npm ci --prefix frontend`.
+2. Clone your new repo, then: `nvm use` → `npm ci` (one install covers every
+   workspace).
 3. Confirm green: `npm run lint && npm run typecheck && npm test`.
 4. Replace the `items` example with your own domain following the swap table in
    [`docs/SETUP.md`](docs/SETUP.md) — the arch tests and typecheck catch anything you miss.
@@ -54,10 +55,8 @@ examples to adapt.
 ## Quickstart
 
 ```bash
-nvm use                      # Node 22
-npm ci                       # root tooling (eslint, playwright, typecheck deps)
-npm ci --prefix backend
-npm ci --prefix frontend
+nvm use                      # Node 22 (the tested pin; engines floor is >=20)
+npm ci                       # ONE install — workspaces cover backend + frontend
 
 npm run dev                  # backend :8137 + frontend :5173
 
@@ -76,12 +75,13 @@ Everything above is green on a fresh clone — the wiring **is** the documentati
 
 ## Where to go next
 
-| You want to… | Read |
-|---|---|
-| Understand the conventions + why each exists | [`CLAUDE.md`](CLAUDE.md) |
+| You want to…                                            | Read                                           |
+| ------------------------------------------------------- | ---------------------------------------------- |
+| Understand the conventions + why each exists            | [`CLAUDE.md`](CLAUDE.md)                       |
 | Understand the architecture + the import/seam decisions | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) |
-| Set up and start replacing the example domain | [`docs/SETUP.md`](docs/SETUP.md) |
-| Understand the test tiers + what they don't cover | [`docs/TESTING.md`](docs/TESTING.md) |
+| Set up and start replacing the example domain           | [`docs/SETUP.md`](docs/SETUP.md)               |
+| Understand the test tiers + what they don't cover       | [`docs/TESTING.md`](docs/TESTING.md)           |
+| Swap a whole stack layer (DB / framework / frontend)    | [`docs/SWAPPING.md`](docs/SWAPPING.md)         |
 
 ## License
 

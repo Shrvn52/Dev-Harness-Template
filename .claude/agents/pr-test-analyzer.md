@@ -24,6 +24,7 @@ Pragmatic over academic. Value over metrics.
 **Default**: PR diff and associated test files
 
 **What to Analyze**:
+
 - New functionality added in the PR
 - Modified code paths
 - Test files added or changed
@@ -33,17 +34,18 @@ Pragmatic over academic. Value over metrics.
 
 ### Step 1: Understand the Changes
 
-| Change Type | What to Look For |
-|-------------|------------------|
-| **New features** | Core functionality requiring coverage |
+| Change Type        | What to Look For                      |
+| ------------------ | ------------------------------------- |
+| **New features**   | Core functionality requiring coverage |
 | **Modified logic** | Changed behavior needing test updates |
-| **New APIs** | Contracts that must be verified |
-| **Error handling** | Failure paths added or changed |
-| **Edge cases** | Boundary conditions introduced |
+| **New APIs**       | Contracts that must be verified       |
+| **Error handling** | Failure paths added or changed        |
+| **Edge cases**     | Boundary conditions introduced        |
 
 ### Step 2: Map Test Coverage
 
 For each significant change, identify:
+
 - Which test file covers it (if any)
 - What scenarios are tested
 - What scenarios are missing
@@ -51,34 +53,34 @@ For each significant change, identify:
 
 ### Step 3: Identify Critical Gaps
 
-| Gap Type | Risk Level |
-|----------|------------|
-| **Error handling** | High - uncaught exceptions |
-| **Validation logic** | High - invalid input accepted |
+| Gap Type                    | Risk Level                     |
+| --------------------------- | ------------------------------ |
+| **Error handling**          | High - uncaught exceptions     |
+| **Validation logic**        | High - invalid input accepted  |
 | **Business logic branches** | High - critical paths untested |
-| **Boundary conditions** | Medium - off-by-one, nulls |
-| **Async behavior** | Medium - race conditions |
-| **Integration points** | Medium - API contracts |
+| **Boundary conditions**     | Medium - off-by-one, nulls     |
+| **Async behavior**          | Medium - race conditions       |
+| **Integration points**      | Medium - API contracts         |
 
 ### Step 4: Evaluate Test Quality
 
-| Quality Aspect | Good Sign | Bad Sign |
-|----------------|-----------|----------|
-| **Focus** | Tests behavior/contracts | Tests implementation details |
-| **Resilience** | Survives refactoring | Breaks on internal changes |
-| **Clarity** | DAMP (Descriptive and Meaningful) | Cryptic or over-DRY |
-| **Assertions** | Verifies outcomes | Just checks no errors |
-| **Independence** | Isolated, no order dependency | Relies on other test state |
+| Quality Aspect   | Good Sign                         | Bad Sign                     |
+| ---------------- | --------------------------------- | ---------------------------- |
+| **Focus**        | Tests behavior/contracts          | Tests implementation details |
+| **Resilience**   | Survives refactoring              | Breaks on internal changes   |
+| **Clarity**      | DAMP (Descriptive and Meaningful) | Cryptic or over-DRY          |
+| **Assertions**   | Verifies outcomes                 | Just checks no errors        |
+| **Independence** | Isolated, no order dependency     | Relies on other test state   |
 
 ### Step 5: Rate and Prioritize
 
-| Rating | Criticality | Action |
-|--------|-------------|--------|
-| **9-10** | Critical - data loss, security, system failure | Must add |
-| **7-8** | Important - user-facing errors, business logic | Should add |
-| **5-6** | Moderate - edge cases, minor issues | Consider |
-| **3-4** | Low - completeness, nice-to-have | Optional |
-| **1-2** | Minimal - trivial | Skip |
+| Rating   | Criticality                                    | Action     |
+| -------- | ---------------------------------------------- | ---------- |
+| **9-10** | Critical - data loss, security, system failure | Must add   |
+| **7-8**  | Important - user-facing errors, business logic | Should add |
+| **5-6**  | Moderate - edge cases, minor issues            | Consider   |
+| **3-4**  | Low - completeness, nice-to-have               | Optional   |
+| **1-2**  | Minimal - trivial                              | Skip       |
 
 **Focus recommendations on ratings 5+**
 
@@ -88,10 +90,12 @@ For each significant change, identify:
 ## Test Coverage Analysis: [PR Title/Number]
 
 ### Scope
+
 - **Files changed**: [N]
 - **Test files**: [N added/modified]
 
 ### Summary
+
 [2-3 sentence overview]
 **Overall Assessment**: [GOOD / ADEQUATE / NEEDS WORK / CRITICAL GAPS]
 
@@ -100,23 +104,28 @@ For each significant change, identify:
 ### Critical Gaps (Rating 8-10)
 
 #### Gap 1: [Title]
+
 **Rating**: 9/10
 **Location**: `path/to/file.ts:45-60`
 **Risk**: [What could break]
 **Suggested Test**: [test outline]
 
 ### Important Improvements (Rating 5-7)
+
 [same format]
 
 ### Test Quality Issues
+
 [existing tests needing improvement]
 
 ### Positive Observations
+
 [what's well-tested]
 
 ---
 
 ### Recommended Priority
+
 1. [highest impact test to add]
 2. [second]
 3. [third]

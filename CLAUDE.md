@@ -10,55 +10,60 @@ Engineering single-source-of-truth for agents working in this repo. This file ow
 
 ## What this is
 
-A working-but-minimal TypeScript monorepo that exists to carry the *harness*, not a
+A working-but-minimal TypeScript monorepo that exists to carry the _harness_, not a
 product. The shipped `items` domain (one table, one route group, one page) is an
 **example to delete** — replace it with your own. The value is the wiring: green
 guardrails an agent inherits and copies.
 
 ## Code-map boundary — what this file owns vs what to look up
 
-| Question | Source |
-|---|---|
+| Question                                          | Source                                                                        |
+| ------------------------------------------------- | ----------------------------------------------------------------------------- |
 | Who calls X · what depends on Y · where is Z used | grep / your editor's LSP (or an optional code-graph tool) — **not** this file |
-| Function signatures, source locations | the code |
-| **Why** a decision was made | this file → *Key Design Decisions* |
-| Load-bearing constraints, "do not casually edit" | this file (inline **DON'T** markers) |
-| Env var defaults + rationale | this file → *Environment variables* (mirrored to `.env.example`) |
-| Conventions + how each is enforced | this file → *Conventions* |
-| Architecture detail, the import/seam decisions | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) |
-| Test tiers + what they don't cover | [`docs/TESTING.md`](docs/TESTING.md) |
+| Function signatures, source locations             | the code                                                                      |
+| **Why** a decision was made                       | this file → _Key Design Decisions_                                            |
+| Load-bearing constraints, "do not casually edit"  | this file (inline **DON'T** markers)                                          |
+| Env var defaults + rationale                      | this file → _Environment variables_ (mirrored to `.env.example`)              |
+| Conventions + how each is enforced                | this file → _Conventions_                                                     |
+| Architecture detail, the import/seam decisions    | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)                                |
+| Test tiers + what they don't cover                | [`docs/TESTING.md`](docs/TESTING.md)                                          |
+| Swap a stack layer (DB / framework / frontend)    | [`docs/SWAPPING.md`](docs/SWAPPING.md)                                        |
+| Keep pinned things fresh (deps, Node, gitleaks)   | [`docs/SETUP.md`](docs/SETUP.md) → _Keeping the template fresh_               |
 
-Keep WHAT/WHERE out of this file — it drifts. Keep WHY/DON'T *in* it — code can't
+Keep WHAT/WHERE out of this file — it drifts. Keep WHY/DON'T _in_ it — code can't
 express intent.
 
 ## Development commands
 
-Run from the repo root. (cd-delegation monorepo — root scripts shell into the tiers.)
+Run from the repo root. (npm-workspaces monorepo — one `npm ci` installs every tier;
+root scripts delegate with `-w`.)
 
-| Command | Does |
-|---|---|
-| `npm run dev` | Backend (`:8137`) + frontend (`:5173`) together (`tools/dev.mjs`, zero-dep). |
-| `npm run build` | Frontend (`tsc` + vite) then backend (`tsc` → `backend/dist/`). |
-| `npm start` | Run the built backend (`node dist/backend/src/index.js`). |
-| `npm run lint` | `eslint .` — the mechanical conventions. |
-| `npm run typecheck` | Tests-inclusive type gate — `tsc --noEmit` over `tests/` + `shared` + `backend/src` and the frontend test surface (Vitest's esbuild never type-checks). |
-| `npm test` | Node tiers (unit + integration + arch) then the frontend jsdom tier. |
-| `npm run test:integration` | API integration tier only. |
-| `npm run test:smoke:dist` | Boot the built `backend/dist` artifact under real Node ESM and hit `/api/health` + `POST /api/items` (needs `npm run build` first; zero-dep `tools/smoke.mjs`). |
-| `npm run test:ui` | Playwright UI E2E (needs a built frontend + `npx playwright install chromium`). |
+| Command                    | Does                                                                                                                                                            |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run dev`              | Backend (`:8137`) + frontend (`:5173`) together (`tools/dev.mjs`, zero-dep).                                                                                    |
+| `npm run build`            | Frontend (`tsc` + vite) then backend (`tsc` → `backend/dist/`).                                                                                                 |
+| `npm start`                | Run the built backend (`node dist/backend/src/index.js`).                                                                                                       |
+| `npm run lint`             | `eslint .` — the mechanical conventions.                                                                                                                        |
+| `npm run typecheck`        | Tests-inclusive type gate — `tsc --noEmit` over `tests/` + `shared` + `backend/src` and the frontend test surface (Vitest's esbuild never type-checks).         |
+| `npm test`                 | Node tiers (unit + integration + arch) then the frontend jsdom tier.                                                                                            |
+| `npm run test:integration` | API integration tier only.                                                                                                                                      |
+| `npm run test:smoke:dist`  | Boot the built `backend/dist` artifact under real Node ESM and hit `/api/health` + `POST /api/items` (needs `npm run build` first; zero-dep `tools/smoke.mjs`). |
+| `npm run test:ui`          | Playwright UI E2E (needs a built frontend + `npx playwright install chromium`).                                                                                 |
+| `npm run format`           | `prettier --write .` — fix formatting.                                                                                                                          |
+| `npm run format:check`     | `prettier --check .` — the CI-enforced formatting gate (lint lane).                                                                                             |
 
 This table is the SSOT for "the one right command". It must match `package.json`
 scripts exactly — the docs-audit skill checks for drift.
 
 ## Tech stack
 
-| Layer | Choice |
-|---|---|
-| Backend | Hono + `@hono/node-server`, better-sqlite3, Zod, run via `tsx` / built via `tsc` |
-| Frontend | React 19 + Vite 6 + TailwindCSS v4 + TanStack Query |
-| Shared | Plain `.ts` (no build step) consumed across the boundary |
-| Tests | Vitest (unit/integration/arch + jsdom) + Playwright (E2E) |
-| Lint | ESLint flat config + `@typescript-eslint` |
+| Layer    | Choice                                                                           |
+| -------- | -------------------------------------------------------------------------------- |
+| Backend  | Hono + `@hono/node-server`, better-sqlite3, Zod, run via `tsx` / built via `tsc` |
+| Frontend | React 19 + Vite 6 + TailwindCSS v4 + TanStack Query                              |
+| Shared   | Plain `.ts` (no build step) consumed across the boundary                         |
+| Tests    | Vitest (unit/integration/arch + jsdom) + Playwright (E2E)                        |
+| Lint     | ESLint flat config + `@typescript-eslint`; prettier for formatting (CI-enforced) |
 
 ## Architecture
 
@@ -78,7 +83,7 @@ scripts exactly — the docs-audit skill checks for drift.
   declared in **three** resolvers (`frontend/tsconfig.json`, `frontend/vite.config.ts`,
   `frontend/vitest.config.ts`) — miss one and imports break in some contexts only.
   **DON'T** delete `shared/package.json` (`{"type":"module"}`): the backend builds under
-  `nodenext`, which decides a file's emit format from the *source's* governing
+  `nodenext`, which decides a file's emit format from the _source's_ governing
   `package.json`. `shared/*.ts` falls under the **root** `package.json` (no `type:module`),
   so without this marker tsc emits `shared/` as **CommonJS** and the ESM backend's
   `import { rowToItem }` crashes at `npm start` with "does not provide an export" — a break
@@ -92,11 +97,11 @@ scripts exactly — the docs-audit skill checks for drift.
 Resolved in one place: `backend/src/config.ts` (fail-loud on an invalid `PORT`).
 Mirror this table in `.env.example`.
 
-| Var | Default | Purpose |
-|---|---|---|
-| `PORT` | `8137` | Backend HTTP port. Boot crashes on a non-integer / out-of-range value. |
-| `HOST` | `127.0.0.1` | Bind address. |
-| `DB_PATH` | `:memory:` | SQLite location. In-memory by default (no file artifact); point at a file to persist. Tests inject their own DB via `setDb()`. |
+| Var       | Default     | Purpose                                                                                                                        |
+| --------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `PORT`    | `8137`      | Backend HTTP port. Boot crashes on a non-integer / out-of-range value.                                                         |
+| `HOST`    | `127.0.0.1` | Bind address.                                                                                                                  |
+| `DB_PATH` | `:memory:`  | SQLite location. In-memory by default (no file artifact); point at a file to persist. Tests inject their own DB via `setDb()`. |
 
 ## Key Design Decisions
 
@@ -108,9 +113,9 @@ Canonical format — **SSOT file · the invariant · the failure mode if violate
   reaches `onError` as a 500 and bypasses status mapping. **DON'T** hand-roll
   `try/catch → c.json` in handlers — throw a typed error. (Enforced: `no-restricted-syntax`.)
 - **Mutation input is validated by Zod, never hand-parsed.** SSOT: `backend/src/schemas/`
-  + `lib/zod-hook.ts`. Invariant: routes use `zValidator('json', schema, zodErrorHook)` +
-  `c.req.valid('json')`. Failure mode: hand-rolled `await c.req.json()` drifts (different
-  error shape, shallower validation, untyped body). **DON'T** parse bodies by hand.
+  - `lib/zod-hook.ts`. Invariant: routes use `zValidator('json', schema, zodErrorHook)` +
+    `c.req.valid('json')`. Failure mode: hand-rolled `await c.req.json()` drifts (different
+    error shape, shallower validation, untyped body). **DON'T** parse bodies by hand.
 - **A name crossing the shared boundary has one home.** SSOT: `shared/`. Invariant: no
   identifier exported from `shared/` is re-declared in `backend/src` or `frontend/src`.
   Failure mode: two definitions drift silently. **DON'T** copy a shared type — import it
@@ -119,7 +124,8 @@ Canonical format — **SSOT file · the invariant · the failure mode if violate
   (`ItemRow` vs `Item`). Invariant: row types mirror columns; API types are assembled in
   TS. **DON'T** "fix" `created_at` to `createdAt` on a row type — the split is intentional.
 - **Debt only shrinks.** SSOT: `tests/arch/ratchet-allowlist.test.ts`. Invariant: the set
-  of files carrying an `eslint-disable` equals the allowlist; it may shrink (clean a file)
+  of first-party source files (`backend/src`, `frontend/src`, `shared`, `tests` helpers)
+  carrying an `eslint-disable` equals the allowlist; it may shrink (clean a file)
   but never grow (silence a new disable). **DON'T** append to the allowlist to quiet lint —
   fix the issue, or document a genuine exception inline with a rationale.
 
@@ -129,15 +135,16 @@ Three tiers. Drift in tier 1 is a CI failure, not a review nit.
 
 **1 — Enforced mechanically** (lint selector or arch test):
 
-| Convention | Enforced by |
-|---|---|
-| No `throw new Error()` in `backend/src` (use typed errors) | `eslint.config.mjs` — `no-restricted-syntax` |
-| Node built-ins use the `node:` prefix | `eslint.config.mjs` — `no-restricted-imports` |
-| No `console.*` in `backend/src` (except the boot path) | `eslint.config.mjs` — `no-console` |
-| No re-declaring a `shared/` export | `tests/arch/no-duplicate-shared-exports.test.ts` |
-| Every registry route has a backing router + unique `/api/` path | `tests/arch/registry-coverage.test.ts` |
-| `eslint-disable` count only shrinks | `tests/arch/ratchet-allowlist.test.ts` |
-| No `FIXME` markers outside the allowlist | `tests/arch/forbidden-token.test.ts` |
+| Convention                                                      | Enforced by                                      |
+| --------------------------------------------------------------- | ------------------------------------------------ |
+| No `throw new Error()` in `backend/src` (use typed errors)      | `eslint.config.mjs` — `no-restricted-syntax`     |
+| Node built-ins use the `node:` prefix                           | `eslint.config.mjs` — `no-restricted-imports`    |
+| No `console.*` in `backend/src` (except the boot path)          | `eslint.config.mjs` — `no-console`               |
+| No re-declaring a `shared/` export                              | `tests/arch/no-duplicate-shared-exports.test.ts` |
+| Every registry route has a backing router + unique `/api/` path | `tests/arch/registry-coverage.test.ts`           |
+| `eslint-disable` count only shrinks                             | `tests/arch/ratchet-allowlist.test.ts`           |
+| No `FIXME` markers outside the allowlist                        | `tests/arch/forbidden-token.test.ts`             |
+| Formatting is prettier-clean (`.prettierrc`)                    | CI lint lane — `npm run format:check`            |
 
 **2 — Documented exceptions** (must carry an inline `eslint-disable` + rationale):
 
@@ -180,7 +187,7 @@ as a `tests/arch/` fitness test. The goal: review only ever does genuine judgmen
 Plans live in `plans/`, committed to git.
 
 - The repo root has a `.ignore` containing `archive/`, so ripgrep (and the Grep tool)
-  auto-skip any `archive/` dir at any depth. **Caveat:** glob does *not* respect
+  auto-skip any `archive/` dir at any depth. **Caveat:** glob does _not_ respect
   `.ignore` — filter `archive/` out of glob results yourself; never read a file under
   `archive/` unless explicitly named.
 - Completing a plan: `git mv plans/foo.md plans/archive/`. New plans go in `plans/` with

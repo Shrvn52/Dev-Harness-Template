@@ -14,17 +14,18 @@ release." -->
 
 ## Findings — T1 (mechanical)
 
-| # | File | Line | Sub-type | Claim (paraphrase) | Status | Reality / Notes |
-|---|---|---|---|---|---|---|
-{{T1_ROWS}}
+| #           | File | Line | Sub-type | Claim (paraphrase) | Status | Reality / Notes |
+| ----------- | ---- | ---- | -------- | ------------------ | ------ | --------------- |
+| {{T1_ROWS}} |
+
 <!-- For every FAIL, the Reality column MUST state the correct value,
 not just "wrong". -->
 
 ## Findings — T2 (behavioural, REVIEW)
 
-| # | File | Line | Claim (paraphrase) | File to open for review |
-|---|---|---|---|---|
-{{T2_ROWS}}
+| #           | File | Line | Claim (paraphrase) | File to open for review |
+| ----------- | ---- | ---- | ------------------ | ----------------------- |
+| {{T2_ROWS}} |
 
 ## Cross-cutting findings
 

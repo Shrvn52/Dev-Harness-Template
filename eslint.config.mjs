@@ -20,22 +20,45 @@ const COMMON_TS_RULES = {
   ...tseslint.configs.recommended.rules,
   // Node built-ins must use the `node:` prefix (`node:fs`, not `fs`). Keeps the
   // import surface unambiguous and future-proof against a userland `fs` package.
-  'no-restricted-imports': ['error', {
-    patterns: [
-      {
-        group: ['fs', 'fs/promises', 'path', 'os', 'crypto', 'child_process', 'url', 'util', 'stream', 'events', 'net', 'http', 'https', 'buffer', 'assert', 'zlib'],
-        message: "Use the 'node:' prefix (e.g. 'node:fs').",
-      },
-    ],
-  }],
+  'no-restricted-imports': [
+    'error',
+    {
+      patterns: [
+        {
+          group: [
+            'fs',
+            'fs/promises',
+            'path',
+            'os',
+            'crypto',
+            'child_process',
+            'url',
+            'util',
+            'stream',
+            'events',
+            'net',
+            'http',
+            'https',
+            'buffer',
+            'assert',
+            'zlib',
+          ],
+          message: "Use the 'node:' prefix (e.g. 'node:fs').",
+        },
+      ],
+    },
+  ],
   '@typescript-eslint/no-explicit-any': 'warn',
   // `_`-prefixed vars/args/catch-bindings are intentional discards.
-  '@typescript-eslint/no-unused-vars': ['error', {
-    argsIgnorePattern: '^_',
-    varsIgnorePattern: '^_',
-    caughtErrorsIgnorePattern: '^_',
-    ignoreRestSiblings: true,
-  }],
+  '@typescript-eslint/no-unused-vars': [
+    'error',
+    {
+      argsIgnorePattern: '^_',
+      varsIgnorePattern: '^_',
+      caughtErrorsIgnorePattern: '^_',
+      ignoreRestSiblings: true,
+    },
+  ],
 };
 
 // Backend-only framework conventions. WORKED EXAMPLE of the promotion loop:
@@ -43,10 +66,12 @@ const COMMON_TS_RULES = {
 // errors in `lib/errors.ts`. The teaching is in the shape, not the rule —
 // smallest AST fingerprint + a message that names the canonical fix.
 const T1_BACKEND_RULES = {
-  'no-restricted-syntax': ['error',
+  'no-restricted-syntax': [
+    'error',
     {
       selector: "ThrowStatement > NewExpression[callee.name='Error']",
-      message: "Use a typed error from 'lib/errors.ts' (BadRequestError | NotFoundError | ConflictError | ValidationError | ServiceUnavailableError | AppError). They map to the right HTTP status via routeErrorHandler — plain `new Error()` reaches onError as a 500 and bypasses the mapping.",
+      message:
+        "Use a typed error from 'lib/errors.ts' (BadRequestError | NotFoundError | ConflictError | ValidationError | ServiceUnavailableError | AppError). They map to the right HTTP status via routeErrorHandler — plain `new Error()` reaches onError as a 500 and bypasses the mapping.",
     },
   ],
   // Structured logging only in services/routes. `console.*` is reserved for the
@@ -56,7 +81,16 @@ const T1_BACKEND_RULES = {
 };
 
 export default [
-  { ignores: ['**/node_modules/**', '**/dist/**', 'backend/dist/**', 'frontend/dist/**', '.claude/**', '.archon/**'] },
+  {
+    ignores: [
+      '**/node_modules/**',
+      '**/dist/**',
+      'backend/dist/**',
+      'frontend/dist/**',
+      '.claude/**',
+      '.archon/**',
+    ],
+  },
 
   // Backend — common rules + the worked framework selector.
   {
@@ -98,12 +132,15 @@ export default [
       ...tseslint.configs.recommended.rules,
       ...reactHooks.configs.recommended.rules,
       '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/no-unused-vars': ['error', {
-        argsIgnorePattern: '^_',
-        varsIgnorePattern: '^_',
-        caughtErrorsIgnorePattern: '^_',
-        ignoreRestSiblings: true,
-      }],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+          ignoreRestSiblings: true,
+        },
+      ],
     },
   },
 ];

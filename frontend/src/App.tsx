@@ -7,7 +7,11 @@ import { fetchItems, createItem } from './api';
 export default function App() {
   const qc = useQueryClient();
   const [title, setTitle] = useState('');
-  const { data: items, isLoading, isError } = useQuery({ queryKey: ['items'], queryFn: fetchItems });
+  const {
+    data: items,
+    isLoading,
+    isError,
+  } = useQuery({ queryKey: ['items'], queryFn: fetchItems });
   const add = useMutation({
     mutationFn: createItem,
     onSuccess: () => {
@@ -19,7 +23,9 @@ export default function App() {
   return (
     <main className="mx-auto min-h-screen max-w-2xl px-4 py-8 sm:px-6">
       <h1 className="text-2xl font-bold tracking-tight">Items</h1>
-      <p className="mt-1 text-sm text-gray-500">Example surface — delete it and pour your own domain in.</p>
+      <p className="mt-1 text-sm text-gray-500">
+        Example surface — delete it and pour your own domain in.
+      </p>
 
       <form
         className="mt-6 flex flex-col gap-2 sm:flex-row"

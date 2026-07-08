@@ -21,16 +21,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version-file: '.nvmrc'
-      # No `npm ci` — `npm audit` resolves from the committed lockfile alone. Each
-      # tree is its own npm project (no workspaces), so audit all three with --prefix.
-      # `if: always()` on the later steps is VISIBILITY only: a root vuln must not hide
-      # a backend/frontend one. Each step still fails the job on its own non-zero exit
-      # (default — deliberately NO continue-on-error, which would swallow a dirty tree).
-      - name: Audit root
+      # No `npm ci` — `npm audit` resolves from the committed lockfile alone. The
+      # single root lockfile carries every workspace's resolutions, so one audit
+      # covers backend + frontend + root tooling in one pass.
+      - name: Audit (all workspaces)
         run: npm audit --audit-level=high
-      - name: Audit backend
-        if: always()
-        run: npm audit --audit-level=high --prefix backend
-      - name: Audit frontend
-        if: always()
-        run: npm audit --audit-level=high --prefix frontend

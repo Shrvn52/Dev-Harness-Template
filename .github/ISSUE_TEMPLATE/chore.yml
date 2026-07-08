@@ -1,7 +1,7 @@
 name: Chore
 description: Test coverage, docs, CI, refactoring, tooling
-title: "[Chore] "
-labels: ["chore"]
+title: '[Chore] '
+labels: ['chore']
 body:
   - type: dropdown
     id: kind
