@@ -12,7 +12,8 @@ Thin dispatcher. This command does **not** re-implement any checks — it routes
 Run from the repo root. Each lane mirrors a CI job:
 
 ```bash
-# 1. Lint — typed-error / zValidator / createRouter / node:-prefix conventions
+# 1. Lint — typed-error + node:-prefix conventions (zValidator / createRouter
+#    conventions are arch tests, run by lane 3)
 npm run lint
 
 # 2. Builds — frontend then backend (tsc across both tiers)

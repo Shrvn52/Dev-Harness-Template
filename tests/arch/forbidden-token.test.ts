@@ -34,7 +34,7 @@ function walkAll(dir: string, out: string[] = []): string[] {
 }
 
 describe('Architecture — no forbidden tokens (FIXME)', () => {
-  const files = ['backend/src', 'frontend/src', 'shared', 'tests'].flatMap((r) =>
+  const files = ['backend/src', 'frontend/src', 'shared', 'tests', 'e2e'].flatMap((r) =>
     walkAll(join(REPO_ROOT, r)),
   );
 
@@ -50,6 +50,26 @@ describe('Architecture — no forbidden tokens (FIXME)', () => {
     expect(
       hits,
       `${TOKEN} markers found — fix, file an issue, or drop them:\n  ${hits.join('\n  ')}`,
+    ).toEqual([]);
+  });
+
+  // ESLint's SECOND inline-silencing channel: a `/* eslint rule: "off" */` config
+  // comment turns any rule off for the whole file while registering zero debt in
+  // the eslint-disable ratchet. Rule config lives in eslint.config.mjs, never
+  // inline — no allowlist, no exceptions. (Disable DIRECTIVES — eslint-disable* —
+  // stay permitted; the ratchet counts those.)
+  const CONFIG_COMMENT = /\/\*\s*eslint(?!-disable|-enable)\b/;
+
+  it('no ESLint inline-config comments (rule config belongs in eslint.config.mjs)', () => {
+    // Same self-reference dance as TOKEN: the illustrative comment above matches
+    // the pattern, so this file rides the one documented allowlist entry.
+    const hits = files
+      .map((f) => relative(REPO_ROOT, f).split('\\').join('/'))
+      .filter((r) => !ALLOWLIST.has(r))
+      .filter((r) => CONFIG_COMMENT.test(readFileSync(join(REPO_ROOT, r), 'utf8')));
+    expect(
+      hits,
+      `Inline ESLint config comments found — move the rule change into eslint.config.mjs (or use a counted eslint-disable directive with a rationale):\n  ${hits.join('\n  ')}`,
     ).toEqual([]);
   });
 });

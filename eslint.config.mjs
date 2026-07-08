@@ -70,9 +70,10 @@ const T1_BACKEND_RULES = {
     'error',
     {
       // Any BUILT-IN error constructor, not just `Error` — `throw new TypeError()`
-      // bypasses status mapping exactly the same way.
+      // bypasses status mapping exactly the same way. :matches() also catches the
+      // no-`new` call form (`throw Error('x')` returns an identical Error instance).
       selector:
-        'ThrowStatement > NewExpression[callee.name=/^(Error|TypeError|RangeError|SyntaxError|EvalError|ReferenceError|URIError|AggregateError)$/]',
+        'ThrowStatement > :matches(NewExpression, CallExpression)[callee.name=/^(Error|TypeError|RangeError|SyntaxError|EvalError|ReferenceError|URIError|AggregateError)$/]',
       message:
         "Use a typed error from 'lib/errors.ts' (BadRequestError | NotFoundError | ConflictError | ValidationError | ServiceUnavailableError | AppError). They map to the right HTTP status via routeErrorHandler — a built-in error reaches onError as a 500 and bypasses the mapping.",
     },
@@ -104,6 +105,12 @@ export default [
     ],
   },
 
+  // A disable directive whose rule no longer fires is stale debt — fail, don't
+  // accumulate. (The other inline-silencing channel, `/* eslint rule: "off" */`
+  // config comments, is banned outright by tests/arch/forbidden-token.test.ts —
+  // rule config lives in THIS file, never inline.)
+  { linterOptions: { reportUnusedDisableDirectives: 'error' } },
+
   // Backend — common rules + the worked framework selector. Type-AWARE linting
   // (projectService) is scoped to this block only: `only-throw-error` needs type
   // info, and backend/src is small enough that the tsc pass is cheap. Don't
@@ -133,6 +140,24 @@ export default [
     languageOptions: { parser: tsparser },
     plugins: { '@typescript-eslint': tseslint },
     rules: { ...COMMON_TS_RULES, '@typescript-eslint/no-explicit-any': 'off' },
+  },
+
+  // E2E + Playwright config — test code; same baseline as tests/. Keeping these
+  // inside the lint perimeter matters: e2e/ is first-party source like any other.
+  {
+    files: ['e2e/**/*.ts', 'playwright.config.ts'],
+    languageOptions: { parser: tsparser },
+    plugins: { '@typescript-eslint': tseslint },
+    rules: { ...COMMON_TS_RULES, '@typescript-eslint/no-explicit-any': 'off' },
+  },
+
+  // Zero-dep tooling scripts (plain ESM JS) — core correctness rules only.
+  {
+    files: ['tools/**/*.mjs'],
+    rules: {
+      'no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      'no-undef': 'off',
+    },
   },
 
   // Boot-path exception: console.* is legitimate before the logger could fire.

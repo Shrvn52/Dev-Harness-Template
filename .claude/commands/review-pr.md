@@ -94,10 +94,10 @@ Cite `file:line` for every finding. Trivial diffs (docs-only, single-line, comme
 
 This template enforces these mechanically. Flagging them here produces duplicate noise and risks suggesting fixes that violate the lint rule. Verify the rule still exists (`npm run lint`, `eslint.config.*`, `tests/arch/`) before deferring to it.
 
-- **Typed errors**: lint bans `throw new Error(...)` in `backend/src/**` — code throws the typed errors from `backend/src/lib/errors.ts`. Don't suggest swapping typed errors back to plain `Error`.
-- **Mutation input validation**: routes parse input via `zValidator` + the shared `zodErrorHook`, not hand-rolled `await c.req.json()`. Lint enforces.
+- **Typed errors**: lint bans throwing built-in error constructors in `backend/src/**` — code throws the typed errors from `backend/src/lib/errors.ts`. Don't suggest swapping typed errors back to plain `Error`.
+- **Mutation input validation**: routes parse input via `zValidator` + the shared `zodErrorHook`, not hand-rolled `c.req.json()`. Enforced by `tests/arch/route-conventions.test.ts`.
 - **`node:` prefix imports**: lint enforces in `backend/src/**`.
-- **Router factory**: routes use `createRouter()` rather than a bare `new Hono()`.
+- **Router factory**: routes use `createRouter()` rather than a bare `new Hono()`. Enforced by `tests/arch/route-conventions.test.ts`.
 - **Duplicate `shared/` exports**: covered by `tests/arch/no-duplicate-shared-exports.test.ts`.
 
 This command is for the working-tree gap and judgment-level findings — not for re-litigating what CI already gates.

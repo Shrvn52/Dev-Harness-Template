@@ -46,15 +46,19 @@ describe('Architecture — route registry coverage', () => {
     // Strip comments before matching — a commented-out import must count as
     // UNregistered, not sneak past the regex below (see the helper's caveats).
     const src = stripComments(readFileSync(join(routesDir, 'registry.ts'), 'utf8'));
-    const files = readdirSync(routesDir).filter((f) => f.endsWith('.ts') && f !== 'registry.ts');
+    // Recursive — a router in a routes/ SUBDIRECTORY is just as silently
+    // unmounted as a top-level one, so the walk must see it.
+    const files = readdirSync(routesDir, { recursive: true })
+      .map(String)
+      .filter((f) => f.endsWith('.ts') && f !== 'registry.ts');
     expect(files.length).toBeGreaterThan(0); // sanity floor — no vacuous pass
     const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     for (const f of files) {
-      const base = f.replace(/\.ts$/, '');
+      const spec = f.split('\\').join('/').replace(/\.ts$/, '.js');
       // Match the `.js` import specifier (registry.ts uses NodeNext ESM imports —
       // './health.js', never './health.ts'). Quote-anchored to avoid a base that is
       // a substring of another registered import matching by accident.
-      const re = new RegExp(`['"]\\./${esc(base)}\\.js['"]`);
+      const re = new RegExp(`['"]\\./${esc(spec)}['"]`);
       expect(
         re.test(src),
         `routes/${f} exposes a router but is not registered in ROUTES — add it, or move non-router helpers to lib/`,

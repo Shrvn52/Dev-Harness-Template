@@ -34,8 +34,9 @@ function rel(f: string): string {
 
 // Every first-party source tree the ratchet watches. walkTs skips *.test.ts,
 // so under tests/ only the shared helpers are scanned — a disable in shared
-// test plumbing is debt like any other.
-const SCAN_ROOTS = ['backend/src', 'frontend/src', 'shared', 'tests'];
+// test plumbing is debt like any other. e2e specs are *.spec.ts, so they ARE
+// scanned: E2E code is first-party source, not a lint-free zone.
+const SCAN_ROOTS = ['backend/src', 'frontend/src', 'shared', 'tests', 'e2e'];
 
 describe('Architecture — eslint-disable ratchet (shrink-only, per-occurrence)', () => {
   // file → actual occurrence count, for every file containing the marker.
