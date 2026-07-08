@@ -3,40 +3,40 @@
   "version": "0.1.0",
   "private": true,
   "description": "Agentic-development harness template — guardrails wired and green on clone.",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
   "engines": {
-    "node": ">=20 <23",
-    "npm": ">=10 <12"
+    "node": ">=20"
   },
   "scripts": {
     "dev": "node tools/dev.mjs",
-    "dev:backend": "cd backend && npm run dev",
-    "dev:frontend": "cd frontend && npm run dev",
-    "build": "cd frontend && npm run build && cd ../backend && npm run build",
-    "start": "cd backend && npm start",
-    "test": "cd backend && npm test && cd ../frontend && npm test",
-    "test:backend": "cd backend && npm test",
-    "test:frontend": "cd frontend && npm test",
-    "test:integration": "cd backend && npx vitest run ../tests/integration",
+    "dev:backend": "npm run dev -w backend",
+    "dev:frontend": "npm run dev -w frontend",
+    "build": "npm run build -w frontend && npm run build -w backend",
+    "start": "npm start -w backend",
+    "test": "npm test -w backend && npm test -w frontend",
+    "test:backend": "npm test -w backend",
+    "test:frontend": "npm test -w frontend",
+    "test:integration": "npm test -w backend -- ../tests/integration",
     "test:smoke:dist": "node tools/smoke.mjs",
     "typecheck": "npm run typecheck:backend && npm run typecheck:frontend",
     "typecheck:backend": "tsc -p tsconfig.typecheck.json",
-    "typecheck:frontend": "cd frontend && tsc -p tsconfig.typecheck.json",
+    "typecheck:frontend": "tsc -p frontend/tsconfig.typecheck.json",
     "test:ui": "CC_INTEGRATION=1 playwright test e2e/ui",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "devDependencies": {
-    "@hono/node-server": "1.19.14",
-    "@hono/zod-validator": "^0.7.6",
     "@playwright/test": "^1.49.1",
-    "@types/better-sqlite3": "^7.6.12",
     "@typescript-eslint/eslint-plugin": "^8.20.0",
     "@typescript-eslint/parser": "^8.20.0",
     "eslint": "^9.18.0",
     "eslint-plugin-react-hooks": "^5.1.0",
-    "hono": "4.12.25",
-    "typescript": "^5.7.3",
-    "vitest": "^3.2.4",
-    "zod": "^4.3.6"
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.3"
   },
   "overrides": {
     "esbuild": "^0.25.0"
