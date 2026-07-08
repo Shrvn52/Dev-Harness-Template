@@ -1,6 +1,7 @@
 /**
- * Architecture: a SHRINK-ONLY debt ratchet. The set of backend/src files
- * carrying an `eslint-disable` directive must equal the ALLOWLIST below — it may
+ * Architecture: a SHRINK-ONLY debt ratchet. The set of first-party source files
+ * (backend/src, frontend/src, shared, tests helpers) carrying an
+ * `eslint-disable` directive must equal the ALLOWLIST below — it may
  * only shrink (clean a file → remove its entry), never grow (silence a new
  * disable → append). The three-way drift check enforces every failure mode.
  *
@@ -27,8 +28,13 @@ function rel(f: string): string {
   return relative(REPO_ROOT, f).split('\\').join('/');
 }
 
+// Every first-party source tree the ratchet watches. walkTs skips *.test.ts,
+// so under tests/ only the shared helpers are scanned — a disable in shared
+// test plumbing is debt like any other.
+const SCAN_ROOTS = ['backend/src', 'frontend/src', 'shared', 'tests'];
+
 describe('Architecture — eslint-disable ratchet (shrink-only)', () => {
-  const withMarker = walkTs(join(REPO_ROOT, 'backend', 'src'))
+  const withMarker = SCAN_ROOTS.flatMap((root) => walkTs(join(REPO_ROOT, ...root.split('/'))))
     .filter((f) => readFileSync(f, 'utf8').includes(MARKER))
     .map(rel);
 

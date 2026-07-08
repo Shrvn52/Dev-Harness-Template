@@ -30,7 +30,7 @@
           {
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/post-edit-lint.sh\"",
-            "timeout": 30000
+            "timeout": 30
           }
         ]
       }

@@ -28,17 +28,20 @@ const children = procs.map(({ name, color, args }) => {
   pipe(child.stderr, process.stderr);
   child.on('exit', (code) => {
     process.stdout.write(prefix(`exited (${code ?? 'signal'})`) + '\n');
-    shutdown();
+    // A child crash must surface as OUR non-zero exit — a wrapper that exits 0
+    // on failure teaches scripts/CI that broken dev servers are fine. The
+    // deliberate-teardown path (Ctrl-C below) wins because shutdown is sticky.
+    shutdown(code === 0 || code === null ? 0 : 1);
   });
   return child;
 });
 
 let shuttingDown = false;
-function shutdown() {
+function shutdown(exitCode = 0) {
   if (shuttingDown) return;
   shuttingDown = true;
   for (const c of children) c.kill('SIGTERM');
-  process.exit(0);
+  process.exit(exitCode);
 }
-process.on('SIGINT', shutdown);
-process.on('SIGTERM', shutdown);
+process.on('SIGINT', () => shutdown(0));
+process.on('SIGTERM', () => shutdown(0));
