@@ -97,11 +97,12 @@ scripts exactly — the docs-audit skill checks for drift.
 Resolved in one place: `backend/src/config.ts` (fail-loud on an invalid `PORT`).
 Mirror this table in `.env.example`.
 
-| Var       | Default     | Purpose                                                                                                                        |
-| --------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `PORT`    | `8137`      | Backend HTTP port. Boot crashes on a non-integer / out-of-range value.                                                         |
-| `HOST`    | `127.0.0.1` | Bind address.                                                                                                                  |
-| `DB_PATH` | `:memory:`  | SQLite location. In-memory by default (no file artifact); point at a file to persist. Tests inject their own DB via `setDb()`. |
+| Var         | Default     | Purpose                                                                                                                        |
+| ----------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `PORT`      | `8137`      | Backend HTTP port. Boot crashes on a non-integer / out-of-range value.                                                         |
+| `HOST`      | `127.0.0.1` | Bind address.                                                                                                                  |
+| `DB_PATH`   | `:memory:`  | SQLite location. In-memory by default (no file artifact); point at a file to persist. Tests inject their own DB via `setDb()`. |
+| `LOG_LEVEL` | `info`      | Minimum level `lib/logger.ts` emits (`debug`\|`info`\|`warn`\|`error`). Boot crashes on any other value.                       |
 
 ## Key Design Decisions
 
@@ -145,7 +146,7 @@ Three tiers. Drift in tier 1 is a CI failure, not a review nit.
 | --------------------------------------------------------------- | ------------------------------------------------ |
 | No `throw new Error()` in `backend/src` (use typed errors)      | `eslint.config.mjs` — `no-restricted-syntax`     |
 | Node built-ins use the `node:` prefix                           | `eslint.config.mjs` — `no-restricted-imports`    |
-| No `console.*` in `backend/src` (except the boot path)          | `eslint.config.mjs` — `no-console`               |
+| No `console.*` in `backend/src` — use `lib/logger.ts`           | `eslint.config.mjs` — `no-console`               |
 | No re-declaring a `shared/` export                              | `tests/arch/no-duplicate-shared-exports.test.ts` |
 | Every registry route has a backing router + unique `/api/` path | `tests/arch/registry-coverage.test.ts`           |
 | `eslint-disable` count only shrinks                             | `tests/arch/ratchet-allowlist.test.ts`           |

@@ -85,9 +85,11 @@ const T1_BACKEND_RULES = {
   // and satisfies the type check — the gate targets accidents, not evasion;
   // deliberate aliasing is review's job.
   '@typescript-eslint/only-throw-error': 'error',
-  // Structured logging only in services/routes. `console.*` is reserved for the
-  // boot path (index.ts, config.ts — whitelisted below) and the unknown-error
-  // fallback in route-error-handler.ts (inline-disabled there with rationale).
+  // Structured logging only in services/routes — the sanctioned path is
+  // `lib/logger.ts` (leveled JSON lines; see its header). `console.*` is
+  // reserved for the boot path (index.ts, config.ts — whitelisted below) and
+  // the unknown-error fallback in route-error-handler.ts (inline-disabled
+  // there with rationale).
   'no-console': 'error',
 };
 
