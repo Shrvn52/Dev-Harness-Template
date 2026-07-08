@@ -111,7 +111,11 @@ Canonical format — **SSOT file · the invariant · the failure mode if violate
   `lib/route-error-handler.ts`. Invariant: services/routes throw `AppError` subclasses;
   the handler maps them to `{ error }` + status. Failure mode: a plain `throw new Error()`
   reaches `onError` as a 500 and bypasses status mapping. **DON'T** hand-roll
-  `try/catch → c.json` in handlers — throw a typed error. (Enforced: `no-restricted-syntax`.)
+  `try/catch → c.json` in handlers — throw a typed error. (Enforced, precisely: a
+  `no-restricted-syntax` selector bans throwing any **built-in** error constructor by
+  name (`Error`, `TypeError`, …), and the type-aware `only-throw-error` bans throwing
+  non-`Error` values. Known blind spot: aliasing a constructor (`const E = Error`)
+  defeats both — the gate catches accidents, not deliberate evasion.)
 - **Mutation input is validated by Zod, never hand-parsed.** SSOT: `backend/src/schemas/`
   - `lib/zod-hook.ts`. Invariant: routes use `zValidator('json', schema, zodErrorHook)` +
     `c.req.valid('json')`. Failure mode: hand-rolled `await c.req.json()` drifts (different
