@@ -1,6 +1,6 @@
 ---
 description: Thin validation dispatcher — runs the same scripts CI runs.
-allowed-tools: ["Bash"]
+allowed-tools: ['Bash']
 ---
 
 # Validate

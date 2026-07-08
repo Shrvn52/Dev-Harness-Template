@@ -2,7 +2,7 @@
 
 A starter repo that bakes in the **agentic-development discipline** — the harness
 layer that lets an AI agent refactor freely without silently breaking things. It is
-opinionated about *structure and discipline*, neutral about *what you build*. You
+opinionated about _structure and discipline_, neutral about _what you build_. You
 pour your own product into a skeleton whose guardrails are already wired and green.
 
 > One idea: **make the right thing mechanical and the wrong thing impossible to merge.**
@@ -15,7 +15,7 @@ pour your own product into a skeleton whose guardrails are already wired and gre
 - **`CLAUDE.md`** — the engineering single-source-of-truth: WHY + DON'T, with WHAT +
   WHERE offloaded. The first thing an agent reads.
 - **Mechanical enforcement** — a flat ESLint config (incl. one worked custom selector)
-  + a `tests/arch/` fitness-test tier that turns conventions into CI-blocking checks.
+  - a `tests/arch/` fitness-test tier that turns conventions into CI-blocking checks.
 - **Four green test tiers** — unit / integration (via the `buildApp()`+`setDb()` seams)
   / arch / Playwright E2E. See [`docs/TESTING.md`](docs/TESTING.md).
 - **A committed `.claude/` harness** — a post-edit lint hook, review subagents, and
@@ -76,12 +76,12 @@ Everything above is green on a fresh clone — the wiring **is** the documentati
 
 ## Where to go next
 
-| You want to… | Read |
-|---|---|
-| Understand the conventions + why each exists | [`CLAUDE.md`](CLAUDE.md) |
+| You want to…                                            | Read                                           |
+| ------------------------------------------------------- | ---------------------------------------------- |
+| Understand the conventions + why each exists            | [`CLAUDE.md`](CLAUDE.md)                       |
 | Understand the architecture + the import/seam decisions | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) |
-| Set up and start replacing the example domain | [`docs/SETUP.md`](docs/SETUP.md) |
-| Understand the test tiers + what they don't cover | [`docs/TESTING.md`](docs/TESTING.md) |
+| Set up and start replacing the example domain           | [`docs/SETUP.md`](docs/SETUP.md)               |
+| Understand the test tiers + what they don't cover       | [`docs/TESTING.md`](docs/TESTING.md)           |
 
 ## License
 

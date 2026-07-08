@@ -26,6 +26,7 @@ Explicit is better than clever.
 **Default**: Recently modified code (unstaged changes from `git diff`)
 
 **Alternative scopes** (when specified):
+
 - Specific files or functions
 - PR diff: All changes in a pull request
 - Broader scope if explicitly requested
@@ -43,36 +44,36 @@ Do not touch code outside scope unless it directly affects the simplification.
 
 ### Step 2: Analyze for Opportunities
 
-| Opportunity | What to Look For |
-|-------------|------------------|
-| **Unnecessary complexity** | Deep nesting, convoluted logic paths |
-| **Redundant code** | Duplicated logic, unused variables |
-| **Over-abstraction** | Abstractions that obscure rather than clarify |
-| **Poor naming** | Unclear variable/function names |
-| **Nested ternaries** | Multiple conditions in ternary chains |
-| **Dense one-liners** | Compact code that sacrifices readability |
-| **Obvious comments** | Comments that describe what code clearly shows |
-| **Inconsistent patterns** | Code that doesn't follow project conventions |
+| Opportunity                | What to Look For                               |
+| -------------------------- | ---------------------------------------------- |
+| **Unnecessary complexity** | Deep nesting, convoluted logic paths           |
+| **Redundant code**         | Duplicated logic, unused variables             |
+| **Over-abstraction**       | Abstractions that obscure rather than clarify  |
+| **Poor naming**            | Unclear variable/function names                |
+| **Nested ternaries**       | Multiple conditions in ternary chains          |
+| **Dense one-liners**       | Compact code that sacrifices readability       |
+| **Obvious comments**       | Comments that describe what code clearly shows |
+| **Inconsistent patterns**  | Code that doesn't follow project conventions   |
 
 ### Step 3: Apply Project Standards
 
 Check and apply project-specific patterns from CLAUDE.md:
 
-| Category | What to Standardize |
-|----------|---------------------|
-| **Imports** | Ordering, extensions, module style |
-| **Functions** | Declaration style, return types |
-| **Error handling** | Project-preferred patterns |
-| **Naming** | Conventions for variables, functions, files |
+| Category           | What to Standardize                         |
+| ------------------ | ------------------------------------------- |
+| **Imports**        | Ordering, extensions, module style          |
+| **Functions**      | Declaration style, return types             |
+| **Error handling** | Project-preferred patterns                  |
+| **Naming**         | Conventions for variables, functions, files |
 
 ### Step 4: Verify Each Simplification
 
-| Check | Pass | Fail |
-|-------|------|------|
-| Functionality preserved? | Behavior unchanged | Different output/behavior |
-| More readable? | Easier to understand | Harder to follow |
-| Maintainable? | Easier to modify/extend | More rigid or fragile |
-| Follows standards? | Matches project patterns | Inconsistent |
+| Check                    | Pass                     | Fail                      |
+| ------------------------ | ------------------------ | ------------------------- |
+| Functionality preserved? | Behavior unchanged       | Different output/behavior |
+| More readable?           | Easier to understand     | Harder to follow          |
+| Maintainable?            | Easier to modify/extend  | More rigid or fragile     |
+| Follows standards?       | Matches project patterns | Inconsistent              |
 
 ## Output Format
 
@@ -80,6 +81,7 @@ Check and apply project-specific patterns from CLAUDE.md:
 ## Code Simplification: [Scope Description]
 
 ### Scope
+
 - **Simplifying**: [git diff / specific files / PR diff]
 - **Files**: [list of files in scope]
 
@@ -88,6 +90,7 @@ Check and apply project-specific patterns from CLAUDE.md:
 ### Simplifications Found
 
 #### 1. [Brief Title]
+
 **File**: `path/to/file.ts:45-60`
 **Type**: Reduced nesting / Improved naming / Removed redundancy / etc.
 
@@ -101,11 +104,11 @@ Check and apply project-specific patterns from CLAUDE.md:
 
 ### Summary
 
-| Metric | Value |
-|--------|-------|
-| Files analyzed | X |
-| Simplifications found | Y |
-| Net line change | -N lines |
+| Metric                | Value    |
+| --------------------- | -------- |
+| Files analyzed        | X        |
+| Simplifications found | Y        |
+| Net line change       | -N lines |
 ```
 
 ## Key Principles

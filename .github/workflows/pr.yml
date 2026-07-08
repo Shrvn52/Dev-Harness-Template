@@ -95,6 +95,9 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npm run lint
+      # prettier is enforced, not aspirational — a formatting config that nothing
+      # checks would drift into a lie (this repo's tier-1 rule applied to itself).
+      - run: npm run format:check
 
   # ── Typecheck — the tests-inclusive type gate. Vitest (esbuild) strips types
   #    without checking, so a type error in any test/arch file passes every other
@@ -164,8 +167,8 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npx playwright install --with-deps chromium
-      - run: npx playwright test            # always-on API specs
-      - run: npm run test:ui                 # flag-gated UI specs (built frontend)
+      - run: npx playwright test # always-on API specs
+      - run: npm run test:ui # flag-gated UI specs (built frontend)
 
   # ────────────────────────────────────────────────────────────────
   # Lockfile drift — `npm install --package-lock-only` must be a no-op

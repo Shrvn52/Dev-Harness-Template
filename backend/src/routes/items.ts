@@ -17,9 +17,8 @@ app.get('/', (c) => {
 
 app.get('/:id', zValidator('param', idSchema, zodErrorHook), (c) => {
   const { id } = c.req.valid('param');
-  const row = getDb()
-    .prepare('SELECT id, title, created_at FROM items WHERE id = ?')
-    .get(id) as ItemRow | undefined;
+  const row = getDb().prepare('SELECT id, title, created_at FROM items WHERE id = ?').get(id) as
+    ItemRow | undefined;
   if (!row) throw new NotFoundError(`item ${id} not found`);
   return c.json(rowToItem(row));
 });
@@ -46,9 +45,7 @@ app.put(
     // The guard turns that into a deliberate 400. A multi-column app replaces this
     // single-column guard with a dynamic SET builder; that's overkill for one column.
     if (body.title === undefined) throw new BadRequestError('no fields to update');
-    const info = getDb()
-      .prepare('UPDATE items SET title = ? WHERE id = ?')
-      .run(body.title, id);
+    const info = getDb().prepare('UPDATE items SET title = ? WHERE id = ?').run(body.title, id);
     if (info.changes === 0) throw new NotFoundError(`item ${id} not found`);
     const row = getDb()
       .prepare('SELECT id, title, created_at FROM items WHERE id = ?')

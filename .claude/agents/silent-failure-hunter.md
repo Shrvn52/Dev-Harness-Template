@@ -25,6 +25,7 @@ Silent failures are critical defects. Period.
 **Default**: Error handling code in PR diff or unstaged changes
 
 **What to Hunt**:
+
 - Try-catch blocks (or language equivalents)
 - Error callbacks and event handlers
 - Conditional branches handling error states
@@ -44,43 +45,43 @@ For every error handling location, evaluate:
 
 #### Logging Quality
 
-| Question | Pass | Fail |
-|----------|------|------|
+| Question                                   | Pass                           | Fail                       |
+| ------------------------------------------ | ------------------------------ | -------------------------- |
 | Is error logged with appropriate severity? | Structured logger with context | `console.log()` or nothing |
-| Does log include sufficient context? | Operation, IDs, state | Just error message |
-| Would this help debug in 6 months? | Clear breadcrumb trail | Cryptic or missing |
+| Does log include sufficient context?       | Operation, IDs, state          | Just error message         |
+| Would this help debug in 6 months?         | Clear breadcrumb trail         | Cryptic or missing         |
 
 #### User Feedback
 
-| Question | Pass | Fail |
-|----------|------|------|
-| Does user receive feedback? | Clear error shown | Silent failure |
-| Is message actionable? | Tells user what to do | "Something went wrong" |
+| Question                    | Pass                  | Fail                   |
+| --------------------------- | --------------------- | ---------------------- |
+| Does user receive feedback? | Clear error shown     | Silent failure         |
+| Is message actionable?      | Tells user what to do | "Something went wrong" |
 
 #### Catch Block Specificity
 
-| Question | Pass | Fail |
-|----------|------|------|
+| Question                      | Pass                 | Fail                    |
+| ----------------------------- | -------------------- | ----------------------- |
 | Catches only expected errors? | Specific error types | `catch (e)` catches all |
-| Could hide unrelated errors? | No | Yes |
+| Could hide unrelated errors?  | No                   | Yes                     |
 
 #### Fallback Behavior
 
-| Question | Pass | Fail |
-|----------|------|------|
-| Is fallback explicit? | Documented/intentional | Silent substitution |
+| Question                       | Pass                    | Fail                   |
+| ------------------------------ | ----------------------- | ---------------------- |
+| Is fallback explicit?          | Documented/intentional  | Silent substitution    |
 | Does it mask the real problem? | No, logs original error | Hides underlying issue |
 
 ### Step 3: Hunt Hidden Failures
 
-| Anti-Pattern | Severity |
-|--------------|----------|
-| Empty catch block | CRITICAL |
-| Log and continue (no user awareness) | HIGH |
-| Return null/default silently | HIGH |
-| Optional chaining hiding errors | MEDIUM |
-| Retry exhaustion without notice | HIGH |
-| Fallback chain without explanation | MEDIUM |
+| Anti-Pattern                         | Severity |
+| ------------------------------------ | -------- |
+| Empty catch block                    | CRITICAL |
+| Log and continue (no user awareness) | HIGH     |
+| Return null/default silently         | HIGH     |
+| Optional chaining hiding errors      | MEDIUM   |
+| Retry exhaustion without notice      | HIGH     |
+| Fallback chain without explanation   | MEDIUM   |
 
 ## Output Format
 
@@ -88,6 +89,7 @@ For every error handling location, evaluate:
 ## Silent Failure Hunt: [Scope Description]
 
 ### Scope
+
 - **Reviewing**: [PR diff / specific files]
 - **Error handlers found**: [N locations]
 
@@ -96,6 +98,7 @@ For every error handling location, evaluate:
 ### Critical Issues (Must Fix)
 
 #### Issue 1: [Brief Title]
+
 **Severity**: CRITICAL
 **Location**: `path/to/file.ts:45-52`
 **Pattern**: [type]
@@ -108,23 +111,26 @@ For every error handling location, evaluate:
 ---
 
 ### High Severity Issues
+
 [same format]
 
 ### Medium Severity Issues
+
 [same format]
 
 ### Positive Findings
+
 [good error handling patterns observed]
 
 ---
 
 ### Summary
 
-| Severity | Count | Action |
-|----------|-------|--------|
-| CRITICAL | X | Must fix before merge |
-| HIGH | Y | Should fix before merge |
-| MEDIUM | Z | Improve when possible |
+| Severity | Count | Action                  |
+| -------- | ----- | ----------------------- |
+| CRITICAL | X     | Must fix before merge   |
+| HIGH     | Y     | Should fix before merge |
+| MEDIUM   | Z     | Improve when possible   |
 
 ### Verdict: [PASS / NEEDS FIXES / CRITICAL ISSUES]
 ```

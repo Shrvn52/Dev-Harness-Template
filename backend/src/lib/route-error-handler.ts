@@ -10,7 +10,9 @@ import { AppError } from './errors.js';
  * CJS/ESM `instanceof` mismatch) passes its status through. Everything else → 500.
  */
 
-function isHTTPException(err: unknown): err is { status: number; message: string; getResponse: () => Response } {
+function isHTTPException(
+  err: unknown,
+): err is { status: number; message: string; getResponse: () => Response } {
   if (err === null || typeof err !== 'object') return false;
   const e = err as { status?: unknown; getResponse?: unknown };
   return typeof e.status === 'number' && typeof e.getResponse === 'function';

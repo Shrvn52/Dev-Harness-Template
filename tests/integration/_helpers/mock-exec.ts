@@ -32,7 +32,9 @@ export interface MockExecHarness {
   restore: () => void;
 }
 
-export function installMockExec(responseMap: Record<string, MockExecResponse> = {}): MockExecHarness {
+export function installMockExec(
+  responseMap: Record<string, MockExecResponse> = {},
+): MockExecHarness {
   const calls: MockExecCall[] = [];
 
   vi.doMock('node:child_process', async () => {

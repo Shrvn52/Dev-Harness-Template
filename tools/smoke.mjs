@@ -44,7 +44,8 @@ const done = new Promise((resolveOnce) => {
   // An exit BEFORE readiness is a boot crash. The deliberate teardown SIGTERM fires
   // exit AFTER success — `ready` is already true then, so we ignore it.
   child.on('exit', (code, signal) => {
-    if (!ready) settle(false, `backend exited before becoming ready (code=${code}, signal=${signal})`);
+    if (!ready)
+      settle(false, `backend exited before becoming ready (code=${code}, signal=${signal})`);
   });
 
   run(settle);
@@ -72,7 +73,9 @@ async function pollHealth() {
         // Hard-fail immediately on a wrong body — don't re-poll a bound-but-wrong
         // server into a timeout (that would blur "wrong" into "never bound").
         if (body?.ok !== true || body?.status !== 'healthy') {
-          throw new Error(`/api/health returned 200 but an unexpected body: ${JSON.stringify(body)}`);
+          throw new Error(
+            `/api/health returned 200 but an unexpected body: ${JSON.stringify(body)}`,
+          );
         }
         return;
       }
@@ -109,5 +112,6 @@ function teardown() {
 
 const ok = await done;
 teardown();
-if (ok) process.stdout.write('[smoke] built artifact booted and served /api/health + /api/items ✓\n');
+if (ok)
+  process.stdout.write('[smoke] built artifact booted and served /api/health + /api/items ✓\n');
 process.exit(ok ? 0 : 1);

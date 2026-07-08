@@ -81,7 +81,7 @@ pass (the backend `include`s `../shared/**/*`; the frontend `include`s `../share
 Two enforced rules make the boundary load-bearing rather than aspirational:
 
 1. **One source per name.** `tests/arch/no-duplicate-shared-exports.test.ts` fails
-   if any name exported from `shared/` is *re-declared* in `backend/src/` or
+   if any name exported from `shared/` is _re-declared_ in `backend/src/` or
    `frontend/src/`. Re-exports (`export { X } from '@shared/...'`) are fine — only
    a second fresh declaration of the same identifier is a violation. This is the
    tripwire that stops a `STATUS_COLORS` in `shared/` and a second one in
@@ -92,7 +92,7 @@ Two enforced rules make the boundary load-bearing rather than aspirational:
    `camelCase` (`Item.createdAt`). `rowToItem()` is the mapping seam between them.
    The split is intentional — do not "fix" the snake_case rows.
 
-### The relative-vs-`@shared` import split (and *why*)
+### The relative-vs-`@shared` import split (and _why_)
 
 The same `shared/` file is imported two different ways depending on which side
 imports it:
@@ -108,17 +108,17 @@ import { rowToItem, type ItemRow } from '../../../shared/types.js';
 This asymmetry is not an oversight. It falls out of how each package emits:
 
 - **The backend compiles to JavaScript** (`tsc` → `backend/dist/`). TypeScript's
-  path aliases are a *type-checking* convenience — **`tsc` does not rewrite them in
+  path aliases are a _type-checking_ convenience — **`tsc` does not rewrite them in
   the emitted JS.** If backend code imported `@shared/types`, the emitted
   `dist/.../items.js` would still say `@shared/types`, and Node at runtime has no
   idea what that means (no bundler, no path-mapping loader). So the backend uses
   **real relative paths with the `.js` extension** that survive emit verbatim and
   resolve at runtime under Node's ESM resolver. That `.js` (not `.ts`) on a
   TypeScript import is required by `moduleResolution: "bundler"`/NodeNext-style
-  ESM — it's the *output* filename.
+  ESM — it's the _output_ filename.
 
 - **The frontend never emits the shared file to disk.** Vite bundles everything,
-  and its bundler *does* honor the `@shared` alias (declared in `vite.config.ts`).
+  and its bundler _does_ honor the `@shared` alias (declared in `vite.config.ts`).
   Its `tsc` pass is `noEmit: true` — purely a type-check — so there's no runtime
   artifact for an unrewritten alias to break. The alias form is cleaner and works
   in every frontend context **as long as it's declared in all three resolvers**
@@ -153,15 +153,15 @@ valid pre-build (source tree) and post-build (`dist/` tree).
 `@shared/*` (and `@/*`) must be declared in **three** resolvers on the frontend, or
 imports work in some contexts and silently break in others:
 
-| Resolver | File | Resolves modules for… |
-|---|---|---|
-| Vite | `frontend/vite.config.ts` (`resolve.alias`) | dev server + production bundle |
-| Vitest | `frontend/vitest.config.ts` (`resolve.alias`) | the jsdom test runner |
+| Resolver   | File                                               | Resolves modules for…             |
+| ---------- | -------------------------------------------------- | --------------------------------- |
+| Vite       | `frontend/vite.config.ts` (`resolve.alias`)        | dev server + production bundle    |
+| Vitest     | `frontend/vitest.config.ts` (`resolve.alias`)      | the jsdom test runner             |
 | TypeScript | `frontend/tsconfig.json` (`compilerOptions.paths`) | the type-checker (editor + `tsc`) |
 
 Miss the Vite entry → runtime/bundle breaks but types pass. Miss the Vitest entry →
 tests fail to resolve while dev works. Miss the tsconfig entry → editor red squiggles
-and `tsc` errors while everything *runs* fine. The three are kept in lockstep on
+and `tsc` errors while everything _runs_ fine. The three are kept in lockstep on
 purpose; both config files carry a comment to that effect. (The backend's Vitest
 config declares only `@shared` for its own test imports — it has no `@` because the
 backend doesn't use one.)
@@ -171,12 +171,12 @@ backend doesn't use one.)
 ## The `buildApp` / `setDb` seams
 
 Two seams make the backend testable without standing up a real process or a real DB
-file. They are the reason the integration tier can drive the *real* app at HTTP
+file. They are the reason the integration tier can drive the _real_ app at HTTP
 speed against an in-memory database.
 
 ### `buildApp()` — the pure app factory
 
-`backend/src/index.ts` separates app *construction* from process *boot*:
+`backend/src/index.ts` separates app _construction_ from process _boot_:
 
 ```ts
 export function buildApp(): Hono {            // pure — NO side effects
@@ -194,7 +194,7 @@ if (argv[1] && fileURLToPath(import.meta.url) === argv[1]) startServer();
 ```
 
 `buildApp()` opens no DB, starts no timer, spawns no subprocess, and binds no port.
-A test can call it, inject a DB, and `serve()` on a random port only when *it*
+A test can call it, inject a DB, and `serve()` on a random port only when _it_
 chooses. The `if (argv[1] && …)` guard means importing `index.ts` from a test never
 boots a server — `startServer()` runs only when the file is the process entrypoint
 (`tsx src/index.ts` / `node dist/.../index.js`). **Keep `buildApp()` side-effect-free;
@@ -205,9 +205,15 @@ the entire integration harness hangs on it.**
 `backend/src/db.ts` owns a single module-level handle:
 
 ```ts
-export function getDb(): Database.Database { /* lazy-open file DB, run migrations */ }
-export function closeDb(): void { /* close + clear */ }
-export function setDb(d: Database.Database): void { db = d; }   // @internal test seam
+export function getDb(): Database.Database {
+  /* lazy-open file DB, run migrations */
+}
+export function closeDb(): void {
+  /* close + clear */
+}
+export function setDb(d: Database.Database): void {
+  db = d;
+} // @internal test seam
 ```
 
 Route handlers call `getDb()` and never touch a connection directly. A test opens its
@@ -223,15 +229,15 @@ there's no runtime guard; the discipline is the contract.
 const db = new Database(':memory:');
 db.pragma('foreign_keys = ON');
 runMigrations(db);
-setDb(db);                                       // inject
-const app = buildApp();                          // real app, real routes
+setDb(db); // inject
+const app = buildApp(); // real app, real routes
 const server = serve({ fetch: app.fetch, port: 0, hostname: '127.0.0.1' });
 // → tests hit `http://127.0.0.1:<port>` with real fetch()
 ```
 
 This drives the real Hono app, the real router registry, the real zod validators,
 and the real error handler — over real HTTP — against a throwaway in-memory DB. It
-catches route/schema/wiring bugs the unit tier can't. (What it *misses* — real
+catches route/schema/wiring bugs the unit tier can't. (What it _misses_ — real
 subprocess, real DB-file migrations, real external APIs — is documented in
 `TESTING.md`; that honesty is the asset.)
 
@@ -257,19 +263,19 @@ Service and route code **throws** typed errors from `lib/errors.ts` instead of
 hand-assembling responses:
 
 ```ts
-if (!row) throw new NotFoundError(`item ${id} not found`);   // → 404 { error: "..." }
+if (!row) throw new NotFoundError(`item ${id} not found`); // → 404 { error: "..." }
 ```
 
-| Class | Status |
-|---|---|
-| `BadRequestError` | 400 |
-| `NotFoundError` | 404 |
-| `ConflictError` | 409 |
-| `ValidationError` | 422 |
-| `ServiceUnavailableError` | 503 |
-| `AppError` (base) | 500 |
+| Class                     | Status |
+| ------------------------- | ------ |
+| `BadRequestError`         | 400    |
+| `NotFoundError`           | 404    |
+| `ConflictError`           | 409    |
+| `ValidationError`         | 422    |
+| `ServiceUnavailableError` | 503    |
+| `AppError` (base)         | 500    |
 
-`lib/route-error-handler.ts` is the Hono `onError` that converges *everything* to one
+`lib/route-error-handler.ts` is the Hono `onError` that converges _everything_ to one
 shape — `{ error: string }` at the right status. `AppError` subclasses carry their
 own status; a Hono `HTTPException` (duck-typed to dodge the CJS/ESM `instanceof`
 mismatch) passes its status through; anything else logs its stack and returns a
@@ -356,7 +362,7 @@ changes.
 
 **Offline-save is intentionally NOT built into this template.** Offline-first —
 a service worker, a local write store, and sync-on-reconnect with conflict
-resolution — is a *substantial application architecture*, not a harness discipline.
+resolution — is a _substantial application architecture_, not a harness discipline.
 Baking it in would force a local-first data model onto every project spun from the
 template, most of which won't want it, and it carries real, app-specific complexity
 (merge semantics, conflict UX, cache invalidation). So the template keeps it a
@@ -370,8 +376,12 @@ wrappers:
 
 ```ts
 // frontend/src/api.ts
-export async function fetchItems(): Promise<Item[]> { /* fetch('/api/items') */ }
-export async function createItem(title: string): Promise<Item> { /* POST /api/items */ }
+export async function fetchItems(): Promise<Item[]> {
+  /* fetch('/api/items') */
+}
+export async function createItem(title: string): Promise<Item> {
+  /* POST /api/items */
+}
 ```
 
 …consumed by TanStack Query:

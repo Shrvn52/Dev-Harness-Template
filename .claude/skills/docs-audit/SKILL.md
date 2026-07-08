@@ -14,13 +14,13 @@ which become stale as the code moves underneath them.
 Designed to run interactively when an operator wants a hygiene pass, or
 headlessly on a schedule.
 
-## What this skill is *not*
+## What this skill is _not_
 
 - **Not a writing-style or readability checker.** T3 framing
   (motivation prose, headings, tone) is explicitly out of scope — see
   `references/claim-types.md`.
 - **Not a fixer.** The audit agent produces a report of findings; a
-  *separate* agent (or a follow-up session) does the actual fix. Keeping
+  _separate_ agent (or a follow-up session) does the actual fix. Keeping
   audit and fix in different agents is the core discipline here — an
   agent that both finds and fixes will rationalise away findings to make
   its own fix easier, or quietly soften a "FAIL" into a "close enough".
@@ -76,7 +76,7 @@ Returns one path per line. **The script owns inclusion / exclusion
 rules** (`node_modules`, `dist`, `.git`, `archive/`, generated trees,
 etc.) — do not re-derive these inline. If the rules need adjustment,
 edit the script's header comment and its prune list together; the
-comment is the SSOT for *why* each exclusion exists. Putting the
+comment is the SSOT for _why_ each exclusion exists. Putting the
 exclusions in the script (not in this skill) means scope tweaks are a
 one-line edit with no skill rewrite.
 
@@ -97,6 +97,7 @@ matrix. The exception is scheduled headless runs where there's no
 operator context to protect — those can run inline.
 
 For each claim, record:
+
 - The exact claim text (one short paraphrase, ≤ 80 chars)
 - The line number (or line range)
 - The claim type (T1 sub-type or T2 sub-type)

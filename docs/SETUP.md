@@ -63,10 +63,10 @@ npm run dev
 `tools/dev.mjs` launches **both** dev servers with prefixed, colour-coded output
 (`[be]` / `[fe]`), zero extra dependencies. Ctrl-C tears both down.
 
-| Server | URL | Notes |
-|---|---|---|
-| Backend (Hono via `tsx watch`) | http://127.0.0.1:8137 | API under `/api/*` |
-| Frontend (Vite) | http://127.0.0.1:5173 | proxies `/api` → backend (see `vite.config.ts`) |
+| Server                         | URL                   | Notes                                           |
+| ------------------------------ | --------------------- | ----------------------------------------------- |
+| Backend (Hono via `tsx watch`) | http://127.0.0.1:8137 | API under `/api/*`                              |
+| Frontend (Vite)                | http://127.0.0.1:5173 | proxies `/api` → backend (see `vite.config.ts`) |
 
 Open **http://127.0.0.1:5173** — the example "Items" surface. Adding an item exercises
 the full path: React → `/api` proxy → Hono route → zValidator → SQLite → back.
@@ -142,17 +142,17 @@ The `items` domain exists only to prove the wiring is green end-to-end. Replacin
 is the intended first move. The example threads through these files — rename or rip
 out each in turn, and the tests/lint/build will tell you when you've missed one:
 
-| Layer | File(s) | What to do |
-|---|---|---|
-| Shared types | `shared/types.ts` | Replace `ItemRow` / `Item` / `rowToItem` with your row + DTO + mapper. Keep the snake_case-row / camelCase-DTO split. |
-| Shared constants | `shared/constants.ts` | Swap `ITEM_SORT_FIELDS` etc. for yours (keep the const-array-derived-union pattern). |
-| Schema | `backend/src/schema.ts` | Change the `CREATE TABLE` in `runMigrations`. Grow it into a migration registry when needed (see `docs/ARCHITECTURE.md` → "Schema"). |
-| Input schemas | `backend/src/schemas/example.ts` | Replace `createItemSchema` with your zod schema(s). |
-| Routes | `backend/src/routes/items.ts` | Write your handlers with `createRouter()` + `zValidator`. |
-| Route registry | `backend/src/routes/registry.ts` | Update `ROUTES` — the SSOT the arch test enforces. |
-| Frontend data layer | `frontend/src/api.ts` | Replace the `fetch` wrappers (this is also the offline seam). |
-| Frontend UI | `frontend/src/App.tsx` | Replace the example surface. |
-| Tests | `tests/unit/example.test.ts`, `tests/integration/items.test.ts`, `frontend/src/App.test.tsx`, `e2e/**` | Rewrite against your domain. |
+| Layer               | File(s)                                                                                                | What to do                                                                                                                           |
+| ------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Shared types        | `shared/types.ts`                                                                                      | Replace `ItemRow` / `Item` / `rowToItem` with your row + DTO + mapper. Keep the snake_case-row / camelCase-DTO split.                |
+| Shared constants    | `shared/constants.ts`                                                                                  | Swap `ITEM_SORT_FIELDS` etc. for yours (keep the const-array-derived-union pattern).                                                 |
+| Schema              | `backend/src/schema.ts`                                                                                | Change the `CREATE TABLE` in `runMigrations`. Grow it into a migration registry when needed (see `docs/ARCHITECTURE.md` → "Schema"). |
+| Input schemas       | `backend/src/schemas/example.ts`                                                                       | Replace `createItemSchema` with your zod schema(s).                                                                                  |
+| Routes              | `backend/src/routes/items.ts`                                                                          | Write your handlers with `createRouter()` + `zValidator`.                                                                            |
+| Route registry      | `backend/src/routes/registry.ts`                                                                       | Update `ROUTES` — the SSOT the arch test enforces.                                                                                   |
+| Frontend data layer | `frontend/src/api.ts`                                                                                  | Replace the `fetch` wrappers (this is also the offline seam).                                                                        |
+| Frontend UI         | `frontend/src/App.tsx`                                                                                 | Replace the example surface.                                                                                                         |
+| Tests               | `tests/unit/example.test.ts`, `tests/integration/items.test.ts`, `frontend/src/App.test.tsx`, `e2e/**` | Rewrite against your domain.                                                                                                         |
 
 After replacing, run the full gate to confirm you're green again:
 

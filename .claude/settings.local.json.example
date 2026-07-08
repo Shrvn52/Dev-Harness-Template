@@ -1,11 +1,6 @@
 {
   "_comment": "COPY this to .claude/settings.local.json (which is gitignored — never committed) and add YOUR machine-specific permissions and overrides here. The committed settings.json keeps a minimal, obviously-safe baseline; everything that accretes per-machine — push/PR perms, plugin config, extra Bash allow patterns, absolute paths — belongs here so it never pollutes a fresh clone.",
   "permissions": {
-    "allow": [
-      "Bash(git push:*)",
-      "Bash(git commit:*)",
-      "Bash(gh pr:*)",
-      "Bash(gh issue:*)"
-    ]
+    "allow": ["Bash(git push:*)", "Bash(git commit:*)", "Bash(gh pr:*)", "Bash(gh issue:*)"]
   }
 }
