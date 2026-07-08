@@ -44,7 +44,8 @@ verification:
 
 - **Subprocesses / external binaries.** Nothing in the template shells out. If your
   domain does, wrap the call in one promisified seam you can stub in integration
-  tests — don't call `child_process` inline in handlers.
+  tests — don't call `child_process` inline in handlers. Recipe (incl. the two
+  mock-fidelity traps): `docs/RECIPES.md` → "The subprocess seam".
 - **Real DB-file migrations.** Tests use a fresh in-memory DB. Migrating a _populated_
   on-disk database (column adds, backfills, ordering) is untested here.
 - **Real external APIs.** Rate limits, auth quirks, pagination, 3xx caching — none of

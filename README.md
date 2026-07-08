@@ -80,6 +80,7 @@ discipline, the arch-test concept, the CI routing, the test taxonomy, the commit
 | Understand the architecture + the import/seam decisions | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) |
 | Understand the test tiers + what they don't cover       | [`docs/TESTING.md`](docs/TESTING.md)           |
 | Swap a whole stack layer (DB / framework / frontend)    | [`docs/SWAPPING.md`](docs/SWAPPING.md)         |
+| Copy in a pattern the template teaches but doesn't ship | [`docs/RECIPES.md`](docs/RECIPES.md)           |
 
 ## License
 

@@ -195,7 +195,8 @@ or tier 3 if it never can be):
 - Mutation success returns the affected resource DTO (`201` + the created object,
   `200` + the updated object); failure is `{ error: string }` + status. No `{ message }`,
   no bare `{ ok: true }` bodies.
-- `localStorage`/magic-number keys are named constants, declared once.
+- `localStorage`/magic-number keys are named constants, declared once (worked
+  pattern: `docs/RECIPES.md` → const-array-derived unions).
 
 **The promotion loop:** when a review finding recurs, encode it as the smallest AST
 fingerprint in `eslint.config.mjs` (see the worked `no-restricted-syntax` selector) or
