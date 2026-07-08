@@ -15,7 +15,7 @@
 // no runtime route happens to import shared.
 import { spawn } from 'node:child_process';
 import { dirname, resolve, join } from 'node:path';
-import { readdirSync } from 'node:fs';
+import { readdirSync, existsSync } from 'node:fs';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 
 const PORT = 8138; // avoid the 8137 default so a running dev server doesn't collide
@@ -67,10 +67,28 @@ async function run(settle) {
     await pollHealth();
     ready = true;
     await importSharedDist();
+    await checkStaticServing();
     settle(true, null);
   } catch (err) {
     settle(false, err.message);
   }
+}
+
+// The ship path: when a frontend build exists, the booted backend must serve it
+// (index.ts mounts frontend/dist behind the API routes). API-only mode — no
+// frontend build — is legitimate, so this probe is conditional, not skipped-silent:
+// it reports which mode it verified.
+let staticMode = 'API-only (no frontend/dist build)';
+async function checkStaticServing() {
+  if (!existsSync(resolve(backendDir, '..', 'frontend', 'dist', 'index.html'))) return;
+  const res = await fetch(`${BASE}/`);
+  const type = res.headers.get('content-type') ?? '';
+  if (res.status !== 200 || !type.includes('text/html')) {
+    throw new Error(
+      `frontend/dist exists but GET / returned ${res.status} (${type}) — static serving is broken`,
+    );
+  }
+  staticMode = 'and serves the built frontend at /';
 }
 
 async function pollHealth() {
@@ -133,6 +151,6 @@ const ok = await done;
 teardown();
 if (ok)
   process.stdout.write(
-    '[smoke] built artifact booted, served /api/health, and dist/shared imports as real ESM ✓\n',
+    `[smoke] built artifact booted, served /api/health, dist/shared imports as real ESM, ${staticMode} ✓\n`,
   );
 process.exit(ok ? 0 : 1);
